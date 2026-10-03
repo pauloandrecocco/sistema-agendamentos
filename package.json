@@ -1,0 +1,39 @@
+{
+  "name": "sistema-agendamentos",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build:shared": "npm run build -w @agenda/shared",
+    "build": "npm run build --workspaces",
+    "predev": "npm run build:shared",
+    "dev": "concurrently -n shared,api,web -c blue,green,magenta \"npm run dev -w @agenda/shared\" \"npm run dev -w api\" \"npm run dev -w web\"",
+    "pretypecheck": "npm run build:shared",
+    "typecheck": "npm run typecheck --workspaces",
+    "pretest": "npm run build:shared",
+    "test": "npm run test --workspaces",
+    "prelint": "npm run build:shared",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.1",
+    "concurrently": "10.0.5",
+    "eslint": "10.12.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.7",
+    "globals": "17.13.0",
+    "prettier": "3.9.9",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.0"
+  }
+}
