@@ -5,6 +5,7 @@ import {
   formatInstantWeekdayDate,
   formatLongDate,
   formatMonthLabel,
+  formatPhone,
   formatTime,
   getBusinessToday,
 } from './format';
@@ -25,5 +26,11 @@ describe('format (business timezone, pt-BR)', () => {
 
   it('today is the São Paulo date', () => {
     expect(getBusinessToday(new Date('2026-10-06T02:00:00.000Z'))).toBe('2026-10-05');
+  });
+
+  it('formats stored phone digits', () => {
+    expect(formatPhone('11987654321')).toBe('(11) 98765-4321');
+    expect(formatPhone('1134567890')).toBe('(11) 3456-7890');
+    expect(formatPhone('123')).toBe('123');
   });
 });

@@ -1,7 +1,7 @@
 import type { RegisterInput } from '@agenda/shared';
 import type { UseFormSetError } from 'react-hook-form';
 import { describe, expect, it, vi } from 'vitest';
-import { ApiError } from '@/lib/api-client';
+import { ApiError } from './api-client';
 import { applyApiErrors } from './apply-api-errors';
 
 const FIELDS = ['name', 'email', 'phone', 'password'] as const;

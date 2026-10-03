@@ -1,5 +1,5 @@
 import type { FieldValues, Path, UseFormSetError } from 'react-hook-form';
-import { ApiError, getFieldErrors } from '@/lib/api-client';
+import { ApiError, getFieldErrors } from './api-client';
 
 /**
  * Shows an API error inside the form when it belongs there: field errors from `details`,

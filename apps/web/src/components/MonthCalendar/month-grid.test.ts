@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildMonthGrid } from './month-grid';
+import { applyDragSelection, buildMonthGrid, getDateRange, toggleDate } from './month-grid';
 
 describe('buildMonthGrid', () => {
   it('starts on the weekday of the 1st (October 2026 starts on Thursday)', () => {
@@ -29,5 +29,60 @@ describe('buildMonthGrid', () => {
 
   it('every week has 7 cells', () => {
     for (const week of buildMonthGrid('2026-10')) expect(week).toHaveLength(7);
+  });
+});
+
+describe('getDateRange', () => {
+  it('includes both ends, in either order, across months', () => {
+    expect(getDateRange('2026-10-30', '2026-11-02')).toEqual([
+      '2026-10-30',
+      '2026-10-31',
+      '2026-11-01',
+      '2026-11-02',
+    ]);
+    expect(getDateRange('2026-10-07', '2026-10-05')).toEqual([
+      '2026-10-05',
+      '2026-10-06',
+      '2026-10-07',
+    ]);
+    expect(getDateRange('2026-10-05', '2026-10-05')).toEqual(['2026-10-05']);
+  });
+});
+
+describe('applyDragSelection', () => {
+  const notPast = (date: string) => date >= '2026-10-05';
+
+  it('adds the dragged range to the selection the drag started from', () => {
+    const selection = applyDragSelection(
+      new Set(['2026-10-20']),
+      '2026-10-08',
+      '2026-10-06',
+      notPast,
+    );
+    expect([...selection].sort()).toEqual(['2026-10-06', '2026-10-07', '2026-10-08', '2026-10-20']);
+  });
+
+  it('shrinks back when the pointer returns toward the anchor', () => {
+    const snapshot = new Set<string>();
+    applyDragSelection(snapshot, '2026-10-06', '2026-10-09', notPast);
+    expect([...applyDragSelection(snapshot, '2026-10-06', '2026-10-07', notPast)]).toEqual([
+      '2026-10-06',
+      '2026-10-07',
+    ]);
+  });
+
+  it('skips days that cannot be selected', () => {
+    const selection = applyDragSelection(new Set(), '2026-10-03', '2026-10-06', notPast);
+    expect([...selection]).toEqual(['2026-10-05', '2026-10-06']);
+  });
+});
+
+describe('toggleDate', () => {
+  it('adds a missing date and removes a present one', () => {
+    expect([...toggleDate(new Set(['2026-10-05']), '2026-10-06')]).toEqual([
+      '2026-10-05',
+      '2026-10-06',
+    ]);
+    expect([...toggleDate(new Set(['2026-10-05']), '2026-10-05')]).toEqual([]);
   });
 });

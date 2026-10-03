@@ -7,8 +7,8 @@ import { FormField } from '@/components/FormField';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getErrorMessage } from '@/lib/api-client';
+import { applyApiErrors } from '@/lib/apply-api-errors';
 import { withRedirect } from '@/lib/redirect';
-import { applyApiErrors } from './apply-api-errors';
 import { useLogin } from './use-session';
 
 const FIELDS = ['email', 'password'] as const;

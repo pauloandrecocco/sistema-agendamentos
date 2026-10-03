@@ -51,3 +51,9 @@ export function formatMonthLabel(month: string): string {
 export function getBusinessToday(now: Date = new Date()): string {
   return toBusinessDate(now);
 }
+
+/** Stored digits → "(11) 98765-4321" / "(11) 3456-7890"; anything else is returned as is. */
+export function formatPhone(digits: string): string {
+  const match = /^(\d{2})(\d{4,5})(\d{4})$/.exec(digits);
+  return match ? `(${match[1]}) ${match[2]}-${match[3]}` : digits;
+}
