@@ -1,4 +1,4 @@
-import type { Role } from './enums.js';
+import type { DayAvailabilityStatus, Role } from './enums.js';
 
 export type HealthResponse = { status: 'ok' };
 
@@ -38,4 +38,32 @@ export type ApiErrorBody = {
     message: string;
     details?: unknown;
   };
+};
+
+/** Working hours of one weekday (0 = Sunday ... 6 = Saturday); times are "HH:mm". */
+export type WorkingHours = {
+  weekday: number;
+  isActive: boolean;
+  startTime: string;
+  endTime: string;
+};
+
+/** Slot duration + weekly working hours (7 rows, ordered by weekday). */
+export type ScheduleConfig = {
+  slotDurationMinutes: number;
+  workingHours: WorkingHours[];
+};
+
+/** Instants are ISO 8601 UTC strings. */
+export type SlotDto = { startAt: string; endAt: string };
+
+export type AvailabilityCalendarResponse = {
+  month: string;
+  days: { date: string; status: DayAvailabilityStatus }[];
+};
+
+export type AvailabilityResponse = {
+  date: string;
+  slotDurationMinutes: number;
+  slots: SlotDto[];
 };

@@ -1,21 +1,43 @@
-import { Role } from '@agenda/shared';
+import { AppointmentStatus, Role } from '@agenda/shared';
+import { randomUUID } from 'node:crypto';
 import { createApp } from '../../src/app.js';
 import { createTokenService } from '../../src/lib/jwt.js';
 import { hashPassword } from '../../src/lib/password.js';
+import type { AppointmentRecord } from '../../src/modules/appointments/appointments.repository.js';
 import { AuthService } from '../../src/modules/auth/auth.service.js';
+import { AvailabilityService } from '../../src/modules/availability/availability.service.js';
+import { InMemoryAppointmentRepository } from '../fakes/in-memory-appointment.repository.js';
+import {
+  InMemoryBlockedDateRepository,
+  InMemoryScheduleRepository,
+} from '../fakes/in-memory-schedule.repository.js';
 import { InMemoryUserRepository } from '../fakes/in-memory-user.repository.js';
 
 export const TEST_JWT_SECRET = 'test-secret';
 
-export function buildTestApp() {
+/** Default frozen "now": Monday 2026-10-05 08:00 in São Paulo (before the first slot). */
+export const DEFAULT_NOW = new Date('2026-10-05T11:00:00.000Z');
+
+export function buildTestApp(options: { now?: Date } = {}) {
   const users = new InMemoryUserRepository();
+  const schedule = new InMemoryScheduleRepository();
+  const blockedDates = new InMemoryBlockedDateRepository();
+  const appointments = new InMemoryAppointmentRepository();
+  const clock = { now: options.now ?? DEFAULT_NOW };
   const tokenService = createTokenService({ secret: TEST_JWT_SECRET, expiresIn: '8h' });
+
   const app = createApp({
     authService: new AuthService(users),
+    availabilityService: new AvailabilityService({
+      schedule,
+      blockedDates,
+      appointments,
+      clock: () => clock.now,
+    }),
     tokenService,
     cookieSecure: false,
   });
-  return { app, users, tokenService };
+  return { app, users, schedule, blockedDates, appointments, clock, tokenService };
 }
 
 /** Inserts a user straight into the fake repository (e.g. the seeded admin). */
@@ -30,6 +52,24 @@ export async function addUser(
     passwordHash: await hashPassword(data.password),
     role: data.role ?? Role.CLIENT,
   });
+}
+
+/** Inserts an appointment straight into the fake repository (CONFIRMED by default). */
+export function addAppointment(
+  appointments: InMemoryAppointmentRepository,
+  data: Partial<AppointmentRecord> & { startAt: Date; endAt: Date },
+): AppointmentRecord {
+  const appointment: AppointmentRecord = {
+    id: randomUUID(),
+    clientId: randomUUID(),
+    status: AppointmentStatus.CONFIRMED,
+    cancelledBy: null,
+    cancelledAt: null,
+    createdAt: new Date('2026-09-01T12:00:00.000Z'),
+    ...data,
+  };
+  appointments.appointments.push(appointment);
+  return appointment;
 }
 
 /** Extracts the access_token cookie (name=value) from a Set-Cookie header, ready for `.set('Cookie', …)`. */

@@ -10,9 +10,13 @@ import { requireJson } from './middlewares/require-json.js';
 import { createAuthController } from './modules/auth/auth.controller.js';
 import { createAuthRouter } from './modules/auth/auth.routes.js';
 import type { AuthService } from './modules/auth/auth.service.js';
+import { createAvailabilityController } from './modules/availability/availability.controller.js';
+import { createAvailabilityRouter } from './modules/availability/availability.routes.js';
+import type { AvailabilityService } from './modules/availability/availability.service.js';
 
 export type AppDeps = {
   authService: AuthService;
+  availabilityService: AvailabilityService;
   tokenService: TokenService;
   cookieSecure: boolean;
 };
@@ -32,6 +36,10 @@ export function createApp(deps: AppDeps) {
     res.json({ status: 'ok' } satisfies HealthResponse);
   });
   api.use('/auth', createAuthRouter(createAuthController(deps), authenticate));
+  api.use(
+    '/availability',
+    createAvailabilityRouter(createAvailabilityController(deps.availabilityService)),
+  );
 
   app.use('/api', api);
   app.use(notFoundHandler);
