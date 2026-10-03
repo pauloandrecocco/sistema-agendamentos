@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import '../zod-locale.js';
 import { isValidDateString, isValidMonthString } from '../helpers/business-date.js';
 
 export const dateStringSchema = z

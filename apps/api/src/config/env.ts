@@ -5,10 +5,10 @@ const envSchema = z.object({
   API_PORT: z.coerce.number().int().min(1).max(65535).default(3333),
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/, error: 'must be a postgresql:// URL' }),
   JWT_SECRET: z.string().min(1, { error: 'is required' }),
-  // Same format accepted by jsonwebtoken (e.g. "8h", "30m", "3600").
+  // jsonwebtoken format with a mandatory unit: a bare number string would be read as milliseconds.
   JWT_EXPIRES_IN: z
     .string()
-    .regex(/^\d+(ms|s|m|h|d|w|y)?$/, { error: 'must look like "8h", "30m" or "3600"' })
+    .regex(/^[1-9]\d*(s|m|h|d|w|y)$/, { error: 'must be a number with a unit, like "8h" or "30m"' })
     .default('8h'),
   COOKIE_SECURE: z
     .enum(['true', 'false'])

@@ -5,15 +5,16 @@ import { AppError, PayloadTooLargeError, ValidationError } from '../lib/errors.j
 import { fromPrismaError } from '../lib/prisma-errors.js';
 import { toFieldErrors } from './validate.js';
 
-/** Errors raised by express.json() (body-parser) carry a `type` and an HTTP `status`. */
-type BodyParserError = Error & { type: string; status: number };
+/**
+ * Client errors raised by Express internals carry an HTTP `status`: body-parser (express.json())
+ * also sets a `type`; the router throws a URIError with status 400 for a malformed URL parameter.
+ */
+type HttpClientError = Error & { status: number; type?: unknown };
 
-function isBodyParserError(err: unknown): err is BodyParserError {
-  return (
-    err instanceof Error &&
-    typeof (err as Partial<BodyParserError>).type === 'string' &&
-    typeof (err as Partial<BodyParserError>).status === 'number'
-  );
+function isHttpClientError(err: unknown): err is HttpClientError {
+  if (!(err instanceof Error)) return false;
+  const status = (err as Partial<HttpClientError>).status;
+  return typeof status === 'number' && status >= 400 && status < 500;
 }
 
 function toAppError(err: unknown): AppError | null {
@@ -21,12 +22,18 @@ function toAppError(err: unknown): AppError | null {
   if (err instanceof z.ZodError) return new ValidationError('Dados inválidos.', toFieldErrors(err));
   const fromDatabase = fromPrismaError(err);
   if (fromDatabase) return fromDatabase;
-  if (isBodyParserError(err) && err.status >= 400 && err.status < 500) {
+  if (isHttpClientError(err)) {
     if (err.type === 'entity.too.large') return new PayloadTooLargeError();
     if (err.type === 'entity.parse.failed') {
       return new ValidationError('O corpo da requisição não é um JSON válido.');
     }
-    return new ValidationError('Não foi possível ler o corpo da requisição.');
+    if (typeof err.type === 'string') {
+      return new ValidationError('Não foi possível ler o corpo da requisição.');
+    }
+    if (err instanceof URIError) {
+      return new ValidationError('A URL da requisição contém caracteres inválidos.');
+    }
+    return new ValidationError('Requisição inválida.');
   }
   return null;
 }

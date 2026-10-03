@@ -1,7 +1,7 @@
 import { Role, type LoginData, type PublicUser, type RegisterData } from '@agenda/shared';
-import { ConflictError, UnauthenticatedError } from '../../lib/errors.js';
+import { ConflictError, EMAIL_IN_USE_MESSAGE, UnauthenticatedError } from '../../lib/errors.js';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
-import { EMAIL_IN_USE_MESSAGE, type UserRecord, type UserRepository } from './auth.repository.js';
+import type { UserRecord, UserRepository } from './auth.repository.js';
 
 const INVALID_CREDENTIALS_MESSAGE = 'E-mail ou senha inválidos.';
 

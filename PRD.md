@@ -611,6 +611,10 @@ COOKIE_SECURE=false
 | 20 | PostgreSQL com volume nomeado `pgdata` | Dados sobrevivem a reinícios e rebuilds; `docker compose down -v` zera o ambiente |
 | 21 | Admin não realiza agendamentos | Pela descrição do projeto, quem agenda é o cliente; o admin recebe e gerencia. Agendar em nome de cliente é melhoria futura |
 
+### Limitações conhecidas (documentar no README na Fase 8)
+- **Advisory lock sob carga alta:** reservas e bloqueios são serializados por um único lock. Cada transação ocupa uma conexão do pool enquanto espera. Com dezenas de requisições simultâneas, a espera pode passar do `maxWait` (2 s) ou do `timeout` (5 s) das transações interativas do Prisma. O erro resultante (`P2028`) vira `500 INTERNAL_ERROR`, não `409`. Isso não afeta a consistência, só a resposta. O volume esperado (uma agenda única) fica muito abaixo desse limite.
+- **`npm audit` (Prisma 7):** o CLI `prisma` aponta vulnerabilidades altas em dependências transitivas (`deepmerge-ts` via `@prisma/config`, `mysql2`). O CLI só roda migrations e seed. O atendimento das requisições usa `@prisma/client` + `@prisma/adapter-pg`, que não carregam essas dependências. A correção sugerida (`npm audit fix --force`) faz downgrade para o Prisma 6, uma mudança incompatível, e por isso não foi aplicada.
+
 ---
 
 ## 17. Melhorias futuras

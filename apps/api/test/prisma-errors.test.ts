@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { Prisma } from '../src/generated/prisma/client.js';
 import { ConflictError } from '../src/lib/errors.js';
-import { fromPrismaError, isAppointmentOverlapViolation } from '../src/lib/prisma-errors.js';
-import { createOverlapViolationError } from './fakes/prisma-error.js';
+import {
+  fromPrismaError,
+  isAppointmentOverlapViolation,
+  isEmailUniqueViolation,
+} from '../src/lib/prisma-errors.js';
+import {
+  createEmailUniqueViolationError,
+  createOverlapViolationError,
+} from './fakes/prisma-error.js';
 
 function knownError(code: string, cause?: Record<string, unknown>) {
   return new Prisma.PrismaClientKnownRequestError('db error', {
@@ -22,6 +29,17 @@ describe('prisma-errors', () => {
     expect(converted).toMatchObject({ httpStatus: 409, code: 'SLOT_ALREADY_BOOKED' });
   });
 
+  it('recognizes the users.email unique violation (shape captured from the real database)', () => {
+    const error = createEmailUniqueViolationError();
+
+    expect(isEmailUniqueViolation(error)).toBe(true);
+    expect(fromPrismaError(error)).toMatchObject({
+      httpStatus: 409,
+      code: 'EMAIL_ALREADY_IN_USE',
+      message: 'Este e-mail já está cadastrado.',
+    });
+  });
+
   it('ignores other database errors', () => {
     const otherExclusion = knownError('P2039', {
       kind: 'postgres',
@@ -34,8 +52,13 @@ describe('prisma-errors', () => {
       originalMessage: 'new row violates check constraint "appointments_end_after_start"',
     });
     const uniqueViolation = knownError('P2002');
+    const otherUnique = knownError('P2002', {
+      kind: 'UniqueConstraintViolation',
+      originalCode: '23505',
+      originalMessage: 'duplicate key value violates unique constraint "other_key"',
+    });
 
-    for (const error of [otherExclusion, checkViolation, uniqueViolation]) {
+    for (const error of [otherExclusion, checkViolation, uniqueViolation, otherUnique]) {
       expect(fromPrismaError(error)).toBeNull();
     }
   });

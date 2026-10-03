@@ -28,6 +28,13 @@ describe('unknown routes', () => {
     },
   );
 
+  it('malformed percent-encoding in a route parameter → 400 VALIDATION_ERROR', async () => {
+    const res = await request(app).post('/api/appointments/%E0%A4%A/cancel');
+
+    expect(res.status).toBe(400);
+    expectStandardError(res.body, 'VALIDATION_ERROR');
+  });
+
   it('wrong method on an existing path → 404 NOT_FOUND', async () => {
     const res = await request(app).delete('/api/auth/login');
 
@@ -84,11 +91,12 @@ describe('request body', () => {
     expect(res.status).toBe(204);
   });
 
-  it('POST without a body to a route that requires one → 400 VALIDATION_ERROR', async () => {
+  it('POST without a body to a route that requires one → 400 VALIDATION_ERROR in Portuguese', async () => {
     const res = await request(app).post('/api/auth/login');
 
     expect(res.status).toBe(400);
     expectStandardError(res.body, 'VALIDATION_ERROR');
+    expect(res.body.error.details).toEqual({ _: [expect.stringMatching(/^Entrada inválida/)] });
   });
 });
 
@@ -111,6 +119,15 @@ describe('errorHandler', () => {
     expect(JSON.stringify(res.body)).not.toContain('hunter2');
     expect(consoleError).toHaveBeenCalled();
     consoleError.mockRestore();
+  });
+
+  it('other Express client error (with a 4xx status) → 400 VALIDATION_ERROR', async () => {
+    const res = await request(appThrowing(Object.assign(new Error('x'), { status: 405 }))).get(
+      '/boom',
+    );
+
+    expect(res.status).toBe(400);
+    expectStandardError(res.body, 'VALIDATION_ERROR');
   });
 
   it('ZodError → 400 VALIDATION_ERROR with field details', async () => {

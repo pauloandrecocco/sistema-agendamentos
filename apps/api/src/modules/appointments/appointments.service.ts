@@ -48,8 +48,10 @@ export class AppointmentsService {
    * lists availability. The exclusion constraint stays as the final guarantee (RN-07).
    */
   async create(clientId: string, startAt: Date): Promise<AppointmentDto> {
-    const now = this.deps.clock();
-    const appointment = await this.deps.transactions.run(async (repos) => {
+    const { appointment, now } = await this.deps.transactions.run(async (repos) => {
+      // Read after the advisory lock is acquired, so a slot that started while this request waited
+      // for the lock is rejected as past.
+      const now = this.deps.clock();
       const config = await repos.schedule.getScheduleConfig();
       const isBlocked = await repos.blockedDates.exists(toBusinessDate(startAt));
       const requestedEnd = new Date(startAt.getTime() + config.slotDurationMinutes * 60_000);
@@ -71,11 +73,14 @@ export class AppointmentsService {
           throw new ConflictError('SLOT_ALREADY_BOOKED', SLOT_ALREADY_BOOKED_MESSAGE);
         case 'OK':
           // endAt "freezes" the current duration in the appointment.
-          return repos.appointments.create({
-            clientId,
-            startAt: check.slot.startAt,
-            endAt: check.slot.endAt,
-          });
+          return {
+            appointment: await repos.appointments.create({
+              clientId,
+              startAt: check.slot.startAt,
+              endAt: check.slot.endAt,
+            }),
+            now,
+          };
       }
     });
     return toAppointmentDto(appointment, now);

@@ -73,3 +73,6 @@ export class BusinessRuleError extends AppError {
 
 /** Same message for the application check and the exclusion constraint (RN-07). */
 export const SLOT_ALREADY_BOOKED_MESSAGE = 'Este horário já foi reservado.';
+
+/** Same message for the application check and the unique index on users.email. */
+export const EMAIL_IN_USE_MESSAGE = 'Este e-mail já está cadastrado.';

@@ -1,6 +1,5 @@
 import type { Role } from '@agenda/shared';
-import { Prisma, type PrismaClient } from '../../generated/prisma/client.js';
-import { ConflictError } from '../../lib/errors.js';
+import type { PrismaClient } from '../../generated/prisma/client.js';
 
 export type UserRecord = {
   id: string;
@@ -16,11 +15,12 @@ export type CreateUserData = Omit<UserRecord, 'id'>;
 export interface UserRepository {
   findByEmail(email: string): Promise<UserRecord | null>;
   findById(id: string): Promise<UserRecord | null>;
-  /** Throws ConflictError(EMAIL_ALREADY_IN_USE) when the email already exists. */
+  /**
+   * A duplicated email (concurrent registration) is rejected by the unique index; the database
+   * error becomes 409 EMAIL_ALREADY_IN_USE in lib/prisma-errors.ts.
+   */
   create(data: CreateUserData): Promise<UserRecord>;
 }
-
-export const EMAIL_IN_USE_MESSAGE = 'Este e-mail já está cadastrado.';
 
 const userSelect = {
   id: true,
@@ -42,15 +42,7 @@ export class PrismaUserRepository implements UserRepository {
     return this.prisma.user.findUnique({ where: { id }, select: userSelect });
   }
 
-  async create(data: CreateUserData): Promise<UserRecord> {
-    try {
-      return await this.prisma.user.create({ data, select: userSelect });
-    } catch (error) {
-      // Concurrent registration with the same email: the unique index decides.
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new ConflictError('EMAIL_ALREADY_IN_USE', EMAIL_IN_USE_MESSAGE);
-      }
-      throw error;
-    }
+  create(data: CreateUserData): Promise<UserRecord> {
+    return this.prisma.user.create({ data, select: userSelect });
   }
 }

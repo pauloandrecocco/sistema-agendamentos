@@ -20,12 +20,13 @@ describe('registerSchema', () => {
     expect(registerSchema.parse({ ...valid, phone: '1133334444' }).phone).toBe('1133334444');
   });
 
-  it('treats a missing or empty phone as undefined', () => {
+  it('treats a missing, empty or blank phone as undefined', () => {
     expect(registerSchema.parse(valid).phone).toBeUndefined();
     expect(registerSchema.parse({ ...valid, phone: '' }).phone).toBeUndefined();
+    expect(registerSchema.parse({ ...valid, phone: '   ' }).phone).toBeUndefined();
   });
 
-  it.each(['123456789', '119876543210', '(11) 9876'])('rejects phone %s', (phone) => {
+  it.each(['123456789', '119876543210', '(11) 9876', 'abc', '( ) -'])('rejects phone %s', (phone) => {
     expect(registerSchema.safeParse({ ...valid, phone }).success).toBe(false);
   });
 
@@ -54,5 +55,17 @@ describe('loginSchema', () => {
 
   it('requires a password', () => {
     expect(loginSchema.safeParse({ email: 'maria@email.com', password: '' }).success).toBe(false);
+  });
+
+  it('has no maximum password length (a long one is just wrong credentials)', () => {
+    const password = 'a'.repeat(100);
+    expect(loginSchema.safeParse({ email: 'maria@email.com', password }).success).toBe(true);
+  });
+});
+
+describe('Zod locale', () => {
+  it('built-in messages are in Portuguese', () => {
+    const result = loginSchema.safeParse(undefined);
+    expect(result.error?.issues[0]?.message).toMatch(/^Entrada inválida/);
   });
 });

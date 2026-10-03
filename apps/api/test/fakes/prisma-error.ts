@@ -30,3 +30,29 @@ export function createOverlapViolationError(): Prisma.PrismaClientKnownRequestEr
     },
   );
 }
+
+const EMAIL_UNIQUE_MESSAGE = 'duplicate key value violates unique constraint "users_email_key"';
+
+/** Same shape Prisma 7 + @prisma/adapter-pg produced against the real database for users.email. */
+export function createEmailUniqueViolationError(): Prisma.PrismaClientKnownRequestError {
+  return new Prisma.PrismaClientKnownRequestError(
+    'Unique constraint failed on the constraint: `users_email_key`',
+    {
+      code: 'P2002',
+      clientVersion: Prisma.prismaVersion.client,
+      meta: {
+        modelName: 'User',
+        driverAdapterError: {
+          name: 'DriverAdapterError',
+          cause: {
+            originalCode: '23505',
+            originalMessage: EMAIL_UNIQUE_MESSAGE,
+            kind: 'UniqueConstraintViolation',
+            constraint: { index: 'users_email_key' },
+            table: 'users',
+          },
+        },
+      },
+    },
+  );
+}

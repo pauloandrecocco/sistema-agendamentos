@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import '../zod-locale.js';
 
 /** ISO 8601 instant, with "Z" or an offset (e.g. 2026-10-05T09:00:00-03:00); parsed to a Date. */
 export const createAppointmentSchema = z.object({

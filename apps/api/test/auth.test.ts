@@ -1,7 +1,7 @@
 import { Role } from '@agenda/shared';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { addUser, buildTestApp, getSessionCookie } from './helpers/build-test-app.js';
 
 const validRegistration = {
@@ -65,6 +65,19 @@ describe('POST /api/auth/register', () => {
     });
   });
 
+  it('turns the unique index violation of a concurrent registration into 409', async () => {
+    await request(ctx.app).post('/api/auth/register').send(validRegistration);
+    // The other request passed the application check before this one was stored.
+    vi.spyOn(ctx.users, 'findByEmail').mockResolvedValueOnce(null);
+
+    const res = await request(ctx.app).post('/api/auth/register').send(validRegistration);
+
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual({
+      error: { code: 'EMAIL_ALREADY_IN_USE', message: 'Este e-mail já está cadastrado.' },
+    });
+  });
+
   it('accepts a masked phone and stores only the digits', async () => {
     const res = await request(ctx.app)
       .post('/api/auth/register')
@@ -83,16 +96,19 @@ describe('POST /api/auth/register', () => {
     expect(res.body.user.phone).toBeNull();
   });
 
-  it('rejects an invalid phone with 400 and field details', async () => {
-    const res = await request(ctx.app)
-      .post('/api/auth/register')
-      .send({ ...validRegistration, phone: '12345' });
+  it.each(['12345', 'abc', '( ) -'])(
+    'rejects the informed phone %s with 400 and field details',
+    async (phone) => {
+      const res = await request(ctx.app)
+        .post('/api/auth/register')
+        .send({ ...validRegistration, phone });
 
-    expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('VALIDATION_ERROR');
-    expect(res.body.error.details).toEqual({ phone: [expect.any(String)] });
-    expect(ctx.users.users).toHaveLength(0);
-  });
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toEqual({ phone: [expect.any(String)] });
+      expect(ctx.users.users).toHaveLength(0);
+    },
+  );
 
   it('reports every invalid field', async () => {
     const res = await request(ctx.app)
@@ -150,6 +166,17 @@ describe('POST /api/auth/login', () => {
       });
       expect(res.headers['set-cookie']).toBeUndefined();
     }
+  });
+
+  it('answers a password longer than 72 characters with the same generic 401', async () => {
+    const res = await request(ctx.app)
+      .post('/api/auth/login')
+      .send({ email: 'maria@email.com', password: 'a'.repeat(100) });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({
+      error: { code: 'INVALID_CREDENTIALS', message: 'E-mail ou senha inválidos.' },
+    });
   });
 });
 

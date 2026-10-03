@@ -9,6 +9,7 @@ import {
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { FakeTransactionManager } from './fakes/fake-transaction-manager.js';
 import {
   addAppointment,
   addUser,
@@ -107,6 +108,20 @@ describe('POST /api/appointments', () => {
     expectError(await book(at(MONDAY, '10:00')), 422, 'SLOT_IN_PAST');
     expectError(await book(at(MONDAY, '10:10')), 422, 'SLOT_IN_PAST');
     expectError(await book(at('2026-10-02', '14:00')), 422, 'SLOT_IN_PAST');
+    expect(ctx.appointments.appointments).toHaveLength(0);
+  });
+
+  it('reads now after acquiring the lock: a slot that started while waiting is in the past', async () => {
+    vi.spyOn(FakeTransactionManager.prototype, 'run').mockImplementationOnce((fn) => {
+      ctx.clock.now = at(MONDAY, '10:31'); // another transaction held the lock past 10:30
+      return fn({
+        schedule: ctx.schedule,
+        blockedDates: ctx.blockedDates,
+        appointments: ctx.appointments,
+      });
+    });
+
+    expectError(await book(at(MONDAY, '10:30')), 422, 'SLOT_IN_PAST');
     expect(ctx.appointments.appointments).toHaveLength(0);
   });
 
