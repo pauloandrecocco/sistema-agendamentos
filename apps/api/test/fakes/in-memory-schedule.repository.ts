@@ -11,6 +11,11 @@ export class InMemoryScheduleRepository implements ScheduleRepository {
   getScheduleConfig(): Promise<ScheduleConfig> {
     return Promise.resolve(structuredClone(this.config));
   }
+
+  saveScheduleConfig(config: ScheduleConfig): Promise<void> {
+    this.config = structuredClone(config);
+    return Promise.resolve();
+  }
 }
 
 export class InMemoryBlockedDateRepository implements BlockedDateRepository {
@@ -22,5 +27,15 @@ export class InMemoryBlockedDateRepository implements BlockedDateRepository {
 
   findInRange(from: string, to: string): Promise<string[]> {
     return Promise.resolve([...this.dates].filter((date) => date >= from && date <= to).sort());
+  }
+
+  addMany(dates: string[]): Promise<void> {
+    for (const date of dates) this.dates.add(date);
+    return Promise.resolve();
+  }
+
+  removeMany(dates: string[]): Promise<void> {
+    for (const date of dates) this.dates.delete(date);
+    return Promise.resolve();
   }
 }

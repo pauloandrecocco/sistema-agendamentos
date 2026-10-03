@@ -1,4 +1,11 @@
-import { AppointmentScope, AppointmentStatus, type CancelledBy } from '@agenda/shared';
+import {
+  AppointmentScope,
+  AppointmentStatus,
+  DisplayStatus,
+  normalizePhone,
+  type AdminClient,
+  type CancelledBy,
+} from '@agenda/shared';
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { DbClient } from '../../lib/prisma.js';
 
@@ -14,6 +21,24 @@ export type AppointmentRecord = {
 };
 
 export type CreateAppointmentRecord = { clientId: string; startAt: Date; endAt: Date };
+
+export type AppointmentWithClient = AppointmentRecord & { client: AdminClient };
+
+/** Half-open instant range [start, end). */
+export type TimeRange = { start: Date; end: Date };
+
+export type AdminAppointmentFilter = {
+  /** startAt >= start (and < end, when given). */
+  start: Date;
+  end?: Date;
+  /** Display status (RN-09), translated with `now`. */
+  status?: DisplayStatus;
+  /** Contains, case-insensitive, in the client's name, e-mail or phone. */
+  search?: string;
+  now: Date;
+  skip: number;
+  take: number;
+};
 
 export interface AppointmentRepository {
   /** CONFIRMED appointments overlapping [start, end). */
@@ -35,6 +60,20 @@ export interface AppointmentRepository {
     cancelledBy: CancelledBy,
     cancelledAt: Date,
   ): Promise<AppointmentRecord | null>;
+  /** Admin list: filtered, ordered by startAt ascending, paginated; `total` ignores pagination. */
+  listForAdmin(
+    filter: AdminAppointmentFilter,
+  ): Promise<{ items: AppointmentWithClient[]; total: number }>;
+  /**
+   * Cancels, in one conditional update, every CONFIRMED appointment starting inside one of
+   * `ranges` and after `after` (used when blocking dates, RN-11). Returns the cancelled ones.
+   */
+  cancelConfirmedStartingIn(
+    ranges: TimeRange[],
+    after: Date,
+    cancelledBy: CancelledBy,
+    cancelledAt: Date,
+  ): Promise<AppointmentRecord[]>;
 }
 
 const appointmentSelect = {
@@ -96,4 +135,80 @@ export class PrismaAppointmentRepository implements AppointmentRepository {
     });
     return count === 0 ? null : this.findById(id);
   }
+
+  async listForAdmin(
+    filter: AdminAppointmentFilter,
+  ): Promise<{ items: AppointmentWithClient[]; total: number }> {
+    const where = adminWhere(filter);
+    const [items, total] = await Promise.all([
+      this.db.appointment.findMany({
+        where,
+        orderBy: [{ startAt: 'asc' }, { id: 'asc' }],
+        skip: filter.skip,
+        take: filter.take,
+        select: {
+          ...appointmentSelect,
+          client: { select: { id: true, name: true, email: true, phone: true } },
+        },
+      }),
+      this.db.appointment.count({ where }),
+    ]);
+    return { items, total };
+  }
+
+  cancelConfirmedStartingIn(
+    ranges: TimeRange[],
+    after: Date,
+    cancelledBy: CancelledBy,
+    cancelledAt: Date,
+  ): Promise<AppointmentRecord[]> {
+    // Single UPDATE ... WHERE status = 'CONFIRMED' ... RETURNING: a concurrent client cancellation
+    // is never overwritten, and only the rows actually changed are returned.
+    return this.db.appointment.updateManyAndReturn({
+      where: {
+        status: AppointmentStatus.CONFIRMED,
+        startAt: { gt: after },
+        OR: ranges.map((range) => ({ startAt: { gte: range.start, lt: range.end } })),
+      },
+      data: { status: AppointmentStatus.CANCELLED, cancelledBy, cancelledAt },
+      select: appointmentSelect,
+    });
+  }
+}
+
+function adminWhere(filter: AdminAppointmentFilter): Prisma.AppointmentWhereInput {
+  const conditions: Prisma.AppointmentWhereInput[] = [
+    { startAt: { gte: filter.start, ...(filter.end && { lt: filter.end }) } },
+  ];
+
+  // RN-09: COMPLETED is a CONFIRMED appointment that has started.
+  switch (filter.status) {
+    case DisplayStatus.CONFIRMED:
+      conditions.push({ status: AppointmentStatus.CONFIRMED, startAt: { gt: filter.now } });
+      break;
+    case DisplayStatus.COMPLETED:
+      conditions.push({ status: AppointmentStatus.CONFIRMED, startAt: { lte: filter.now } });
+      break;
+    case DisplayStatus.CANCELLED:
+      conditions.push({ status: AppointmentStatus.CANCELLED });
+      break;
+  }
+
+  if (filter.search) {
+    const { search } = filter;
+    // The phone is stored as digits only, so it is compared with the digits of the term; a term
+    // without digits would be `contains ""`, which matches every phone.
+    const digits = normalizePhone(search);
+    conditions.push({
+      client: {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+          ...(digits ? [{ phone: { contains: digits } }] : []),
+        ],
+      },
+    });
+  }
+
+  return { AND: conditions };
 }

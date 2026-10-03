@@ -31,6 +31,15 @@ function isFree(slot: Slot, appointments: readonly OccupyingAppointment[]): bool
   );
 }
 
+function getWorkingHours(config: ScheduleConfig, date: string) {
+  return config.workingHours.find((row) => row.weekday === getWeekday(date));
+}
+
+/** False for a "closed" day: its weekday is inactive in the weekly working hours. */
+export function isWeekdayActive(config: ScheduleConfig, date: string): boolean {
+  return getWorkingHours(config, date)?.isActive ?? false;
+}
+
 /** RN-04: slots of a day from the weekly working hours, ignoring occupation and "now". */
 export function generateDaySlots(input: {
   date: string;
@@ -40,7 +49,7 @@ export function generateDaySlots(input: {
   const { date, config, isBlocked } = input;
   if (isBlocked) return [];
 
-  const hours = config.workingHours.find((row) => row.weekday === getWeekday(date));
+  const hours = getWorkingHours(config, date);
   if (!hours?.isActive) return [];
 
   const duration = config.slotDurationMinutes;
@@ -110,9 +119,8 @@ export function getMonthDayStatuses(input: {
     let status: DayAvailabilityStatus;
     if (date < today) status = DayAvailabilityStatus.PAST;
     else if (blockedDates.has(date)) status = DayAvailabilityStatus.BLOCKED;
-    else if (!config.workingHours.find((row) => row.weekday === getWeekday(date))?.isActive) {
-      status = DayAvailabilityStatus.CLOSED;
-    } else {
+    else if (!isWeekdayActive(config, date)) status = DayAvailabilityStatus.CLOSED;
+    else {
       const free = getAvailableSlots({ date, config, isBlocked: false, appointments, now });
       status = free.length > 0 ? DayAvailabilityStatus.AVAILABLE : DayAvailabilityStatus.NO_SLOTS;
     }

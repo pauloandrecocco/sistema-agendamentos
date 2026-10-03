@@ -66,8 +66,9 @@ export class BusinessRuleError extends AppError {
       | 'APPOINTMENT_ALREADY_STARTED'
       | 'INVALID_DATE',
     message: string,
+    details?: unknown,
   ) {
-    super(422, code, message);
+    super(422, code, message, details);
   }
 }
 

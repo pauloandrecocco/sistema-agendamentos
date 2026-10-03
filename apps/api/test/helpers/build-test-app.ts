@@ -4,9 +4,11 @@ import { createApp } from '../../src/app.js';
 import { createTokenService } from '../../src/lib/jwt.js';
 import { hashPassword } from '../../src/lib/password.js';
 import type { AppointmentRecord } from '../../src/modules/appointments/appointments.repository.js';
+import { AdminService } from '../../src/modules/admin/admin.service.js';
 import { AppointmentsService } from '../../src/modules/appointments/appointments.service.js';
 import { AuthService } from '../../src/modules/auth/auth.service.js';
 import { AvailabilityService } from '../../src/modules/availability/availability.service.js';
+import { ScheduleService } from '../../src/modules/schedule/schedule.service.js';
 import { FakeTransactionManager } from '../fakes/fake-transaction-manager.js';
 import { InMemoryAppointmentRepository } from '../fakes/in-memory-appointment.repository.js';
 import {
@@ -24,20 +26,23 @@ export function buildTestApp(options: { now?: Date } = {}) {
   const users = new InMemoryUserRepository();
   const schedule = new InMemoryScheduleRepository();
   const blockedDates = new InMemoryBlockedDateRepository();
-  const appointments = new InMemoryAppointmentRepository();
+  const appointments = new InMemoryAppointmentRepository(users);
   const clock = { now: options.now ?? DEFAULT_NOW };
   const tokenService = createTokenService({ secret: TEST_JWT_SECRET, expiresIn: '8h' });
   const now = () => clock.now;
   const repos = { schedule, blockedDates, appointments };
+  const transactions = new FakeTransactionManager(repos);
 
   const app = createApp({
+    adminService: new AdminService({ ...repos, clock: now }),
     appointmentsService: new AppointmentsService({
-      transactions: new FakeTransactionManager(repos),
+      transactions,
       appointments,
       clock: now,
     }),
     authService: new AuthService(users),
     availabilityService: new AvailabilityService({ ...repos, clock: now }),
+    scheduleService: new ScheduleService({ ...repos, transactions, clock: now }),
     tokenService,
     cookieSecure: false,
   });

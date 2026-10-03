@@ -4,6 +4,7 @@ export * from './helpers/business-date.js';
 export * from './helpers/phone.js';
 export * from './helpers/status.js';
 export * from './helpers/time.js';
+export * from './schemas/admin.js';
 export * from './schemas/appointments.js';
 export * from './schemas/auth.js';
 export * from './schemas/availability.js';

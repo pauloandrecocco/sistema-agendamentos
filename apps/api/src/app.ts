@@ -7,6 +7,9 @@ import { createAuthenticate } from './middlewares/authenticate.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { notFoundHandler } from './middlewares/not-found.js';
 import { requireJson } from './middlewares/require-json.js';
+import { createAdminController } from './modules/admin/admin.controller.js';
+import { createAdminRouter } from './modules/admin/admin.routes.js';
+import type { AdminService } from './modules/admin/admin.service.js';
 import { createAppointmentsController } from './modules/appointments/appointments.controller.js';
 import { createAppointmentsRouter } from './modules/appointments/appointments.routes.js';
 import type { AppointmentsService } from './modules/appointments/appointments.service.js';
@@ -16,11 +19,15 @@ import type { AuthService } from './modules/auth/auth.service.js';
 import { createAvailabilityController } from './modules/availability/availability.controller.js';
 import { createAvailabilityRouter } from './modules/availability/availability.routes.js';
 import type { AvailabilityService } from './modules/availability/availability.service.js';
+import { createScheduleController } from './modules/schedule/schedule.controller.js';
+import type { ScheduleService } from './modules/schedule/schedule.service.js';
 
 export type AppDeps = {
+  adminService: AdminService;
   appointmentsService: AppointmentsService;
   authService: AuthService;
   availabilityService: AvailabilityService;
+  scheduleService: ScheduleService;
   tokenService: TokenService;
   cookieSecure: boolean;
 };
@@ -47,6 +54,16 @@ export function createApp(deps: AppDeps) {
   api.use(
     '/appointments',
     createAppointmentsRouter(createAppointmentsController(deps.appointmentsService), authenticate),
+  );
+  api.use(
+    '/admin',
+    createAdminRouter(
+      {
+        admin: createAdminController(deps),
+        schedule: createScheduleController(deps.scheduleService),
+      },
+      authenticate,
+    ),
   );
 
   app.use('/api', api);

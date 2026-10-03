@@ -89,3 +89,40 @@ export type AppointmentDto = {
 export type AppointmentResponse = { appointment: AppointmentDto };
 
 export type AppointmentListResponse = { items: AppointmentDto[] };
+
+export type AdminSummaryResponse = {
+  /** Not-cancelled appointments of today (business timezone), including those already started. */
+  today: number;
+  /** Not-cancelled appointments from tomorrow to today + 7. */
+  next7Days: number;
+};
+
+export type AdminCalendarDay = {
+  date: string;
+  appointmentsCount: number;
+  isClosed: boolean;
+  isBlocked: boolean;
+  isPast: boolean;
+};
+
+export type AdminCalendarResponse = { month: string; days: AdminCalendarDay[] };
+
+export type AdminClient = { id: string; name: string; email: string; phone: string | null };
+
+export type AdminAppointmentDto = AppointmentDto & { client: AdminClient };
+
+export type AdminAppointmentListResponse = {
+  items: AdminAppointmentDto[];
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
+export type ScheduleConfigResponse = ScheduleConfig;
+
+export type BlockDatesResponse = {
+  blockedDates: string[];
+  cancelledAppointments: AppointmentDto[];
+};
+
+export type UnblockDatesResponse = { unblockedDates: string[] };

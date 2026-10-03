@@ -453,12 +453,17 @@ Base: `/api`. JSON. Autenticação via cookie httpOnly (seção 13).
 | POST | `/admin/blocked-dates/unblock` | `{ dates: ["YYYY-MM-DD"] }` (1–92) | `200 { unblockedDates }` |
 
 Detalhes de `/admin/appointments`:
-- `from`/`to`: `YYYY-MM-DD`, inclusivos, fuso de negócio. Padrão: `from = hoje`, sem `to`.
+- `from`/`to`: `YYYY-MM-DD`, inclusivos, fuso de negócio. Padrão: `from = hoje`, sem `to`. `from > to` → `400 VALIDATION_ERROR`.
 - `status`: `CONFIRMED | COMPLETED | CANCELLED` (status de exibição; traduzido para consulta conforme RN-09).
-- `search`: contém em nome, e-mail ou telefone (case-insensitive).
+- `search`: contém em nome, e-mail ou telefone (case-insensitive). Como o telefone é gravado só com dígitos, ele é comparado com os dígitos do termo (ex.: `(11) 9876` encontra `119876…`) — apenas quando o termo tiver ao menos 1 dígito (senão a comparação seria `contains ""` e casaria com todos).
 - `page` padrão 1; `pageSize` padrão 20, máx. 100. Ordem: `startAt` crescente.
 - Cada item inclui `client: { id, name, email, phone }`.
 - A aba Agenda usa esta rota com `from = to = dia selecionado`.
+
+Detalhes de configuração e bloqueio:
+- `PUT /admin/schedule` grava duração e os 7 dias em uma única transação (`TransactionManager.run`), atômica e serializada com as reservas. Não altera agendamentos (RN-10).
+- `POST /admin/blocked-dates`: `cancelledAppointments` é uma lista de `appointment` (mesmo formato do cliente, sem `client`); `blockedDates` são as datas pedidas (sem repetição, ordenadas), todas bloqueadas ao final.
+- `POST /admin/blocked-dates/unblock`: `unblockedDates` são as datas pedidas (idempotente: desbloquear data não bloqueada não é erro).
 
 Cancelamento é `POST` de ação (não `DELETE`): o registro muda de estado, não é removido.
 
