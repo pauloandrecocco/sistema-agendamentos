@@ -1,6 +1,7 @@
 **/dist
 **/node_modules
 coverage
+apps/api/src/generated
 package-lock.json
 PRD.md
 CLAUDE.md

@@ -10,13 +10,16 @@ Sistema de agendamentos full stack (teste técnico). **`PRD.md` é a fonte de ve
 ```bash
 docker compose up --build        # sobe tudo (db, api, web) em http://localhost:3000
 docker compose up db             # só o banco, para desenvolvimento local
-npm run dev                      # shared (watch) + api (3333) + web (5173)
+npm run dev                      # shared (watch) + api (API_PORT, padrão 3333) + web (5173)
 npm test                         # testes de todos os workspaces
 npm run lint && npm run typecheck
 npm run test -w api              # só backend
 npm run db:migrate -w api -- --name <nome>   # script que roda "prisma migrate dev" (ver regra sobre constraints abaixo)
+npm run db:generate -w api       # gera o cliente Prisma em apps/api/src/generated (os scripts pre* da raiz já rodam)
+npm run db:seed -w api           # seed idempotente (usuários + configuração da agenda)
 npm run check:concurrency -w api # verificação manual de concorrência (API rodando)
 ```
+Fora do Docker, copie `.env.example` para `.env` na raiz: `DATABASE_URL` e `JWT_SECRET` são obrigatórias (sem padrão). A porta da API é só `API_PORT`.
 
 ## Forma de trabalhar
 - Implemente **uma fase por vez** (PRD seção 19). Ao final de cada fase: lint, typecheck e testes passando, depois commit (`feat: ...`, `fix: ...`, `test: ...`, `chore: ...`).

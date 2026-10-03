@@ -11,14 +11,16 @@
   },
   "scripts": {
     "build:shared": "npm run build -w @agenda/shared",
+    "build:deps": "npm run build:shared && npm run db:generate -w api",
+    "prebuild": "npm run db:generate -w api",
     "build": "npm run build --workspaces",
-    "predev": "npm run build:shared",
+    "predev": "npm run build:deps",
     "dev": "concurrently -n shared,api,web -c blue,green,magenta \"npm run dev -w @agenda/shared\" \"npm run dev -w api\" \"npm run dev -w web\"",
-    "pretypecheck": "npm run build:shared",
+    "pretypecheck": "npm run build:deps",
     "typecheck": "npm run typecheck --workspaces",
-    "pretest": "npm run build:shared",
+    "pretest": "npm run build:deps",
     "test": "npm run test --workspaces",
-    "prelint": "npm run build:shared",
+    "prelint": "npm run build:deps",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
@@ -35,5 +37,10 @@
     "prettier": "3.9.9",
     "typescript": "6.0.3",
     "typescript-eslint": "8.71.0"
+  },
+  "allowScripts": {
+    "prisma@7.10.0": true,
+    "@prisma/engines@7.10.0": true,
+    "esbuild@0.28.2": true
   }
 }

@@ -469,13 +469,15 @@ Cancelamento é `POST` de ação (não `DELETE`): o registro muda de estado, nã
 ### 10.3 Códigos de erro
 | HTTP | code | Quando |
 |---|---|---|
-| 400 | `VALIDATION_ERROR` | Corpo/query inválidos (Zod); `details` com erros por campo |
+| 400 | `VALIDATION_ERROR` | Corpo/query inválidos (Zod), JSON malformado ou outra falha de leitura do corpo; `details` com erros por campo (quando houver) |
 | 401 | `UNAUTHENTICATED` | Sem cookie ou token inválido/expirado |
 | 401 | `INVALID_CREDENTIALS` | Login inválido |
 | 403 | `FORBIDDEN` | Papel não autorizado |
 | 404 | `NOT_FOUND` | Recurso inexistente ou de outro cliente |
 | 409 | `EMAIL_ALREADY_IN_USE` | Cadastro com e-mail existente |
 | 409 | `SLOT_ALREADY_BOOKED` | Sobreposição (aplicação ou constraint) |
+| 413 | `PAYLOAD_TOO_LARGE` | Corpo acima do limite do leitor JSON (100 kB) |
+| 415 | `UNSUPPORTED_MEDIA_TYPE` | `POST`/`PUT` com corpo e `Content-Type` diferente de `application/json` |
 | 422 | `SLOT_IN_PAST` | `startAt` no passado |
 | 422 | `SLOT_NOT_AVAILABLE` | `startAt` não é slot válido |
 | 422 | `APPOINTMENT_ALREADY_CANCELLED` | Cancelar já cancelado |
@@ -493,6 +495,11 @@ Cancelamento é `POST` de ação (não `DELETE`): o registro muda de estado, nã
 ## 12. Tratamento de erros
 - Hierarquia `AppError(httpStatus, code, message, details?)` com subclasses (`ValidationError`, `UnauthenticatedError`, `ForbiddenError`, `NotFoundError`, `ConflictError`, `BusinessRuleError`).
 - Um único `errorHandler` converte `AppError`, `ZodError` e erros do Prisma (via `lib/prisma-errors.ts`) no formato da seção 10.2. Express 5 encaminha rejeições de handlers `async` automaticamente.
+- O formato padrão vale também para erros fora dos handlers de rota:
+  - Rota inexistente em qualquer caminho do servidor da API (inclusive `/api/*`) → `404 NOT_FOUND` (handler *catch-all* registrado depois das rotas).
+  - JSON malformado ou outra falha de leitura do corpo → `400 VALIDATION_ERROR`.
+  - Corpo acima do limite → `413 PAYLOAD_TOO_LARGE`.
+  - Nunca há resposta HTML nem stack trace.
 - Frontend: cliente HTTP converte respostas de erro em `ApiError { status, code, message, details }`; formulários mostram erros de campo; demais erros viram toast.
 
 ## 13. Autenticação e segurança
@@ -501,6 +508,7 @@ Cancelamento é `POST` de ação (não `DELETE`): o registro muda de estado, nã
   - JavaScript não lê o cookie → token protegido contra roubo via XSS.
   - Front não armazena nem anexa token; descobre a sessão via `GET /auth/me`.
   - CSRF mitigado por `SameSite=Lax` + mesma origem (nginx no Docker, proxy do Vite em dev) + API só aceita JSON.
+- **Somente JSON:** requisição `POST`/`PUT` **com corpo** e `Content-Type` diferente de `application/json` → `415 UNSUPPORTED_MEDIA_TYPE`. Requisições sem corpo (ex.: cancelamentos, logout) não são afetadas.
 - `helmet` habilitado. Senhas com `bcryptjs` (sem dependência nativa no Docker Alpine).
 - Sem CORS (mesma origem).
 
@@ -510,7 +518,7 @@ Cancelamento é `POST` de ação (não `DELETE`): o registro muda de estado, nã
 | Serviço | Imagem/Build | Detalhes |
 |---|---|---|
 | `db` | `postgres:17-alpine` | volume `pgdata`; healthcheck `pg_isready`; porta `${DB_PORT:-5432}` |
-| `api` | `apps/api/Dockerfile` (multi-stage; contexto na raiz para incluir `packages/shared`) | sobe após `db` saudável; comando: `prisma migrate deploy` → seed (compilado junto com a API ou executado com `tsx` incluído na imagem) → `node dist/server.js`; healthcheck em `/api/health`; porta `${API_PORT:-3333}` (exposta para debug) |
+| `api` | `apps/api/Dockerfile` (multi-stage; contexto na raiz para incluir `packages/shared`) | sobe após `db` saudável; comando: `prisma migrate deploy` → `node dist/prisma/seed.js` (seed compilado com `tsc` junto com a API) → `node dist/src/server.js`; healthcheck em `/api/health`; dentro do container escuta **fixo na 3333** (o compose define `API_PORT=3333` no container) e publica `${API_PORT:-3333}:3333` (exposta para debug) |
 | `web` | `apps/web/Dockerfile` (build Vite → `nginx:alpine`) | `nginx.conf`: SPA fallback (`try_files … /index.html`) e `location /api/ → http://api:3333`; sobe após `api` saudável; porta `${WEB_PORT:-3000}` |
 
 Aplicação acessível em **http://localhost:3000**.
@@ -522,6 +530,7 @@ POSTGRES_USER=agenda
 POSTGRES_PASSWORD=agenda
 POSTGRES_DB=agenda
 DB_PORT=5432
+# Fora do Docker: porta em que a API escuta (e destino do proxy do Vite). No Docker: porta publicada no host (a API escuta fixo na 3333)
 API_PORT=3333
 WEB_PORT=3000
 # Usado no desenvolvimento fora do Docker; no Compose é montado apontando para o host "db"
@@ -533,8 +542,9 @@ COOKIE_SECURE=false
 
 ### 14.3 Desenvolvimento local (fora do Docker)
 - `docker compose up db` para subir só o banco.
-- `npm install` na raiz; `npm run dev` sobe `shared` (watch), `api` (tsx watch, porta 3333) e `web` (Vite, porta 5173, proxy `/api → http://localhost:3333`).
-- A API lê o `.env` da raiz.
+- Copiar `.env.example` para `.env` na raiz: fora do Docker, `DATABASE_URL` e `JWT_SECRET` são obrigatórias e não têm padrão (seção 11); sem elas a API não sobe.
+- `npm install` na raiz; `npm run dev` sobe `shared` (watch), `api` (tsx watch, porta `API_PORT`) e `web` (Vite, porta 5173, proxy `/api → http://localhost:${API_PORT}`).
+- A API e o proxy do Vite leem o `.env` da raiz. A porta da API é configurada **somente** por `API_PORT` (padrão 3333); não existe variável `PORT`.
 
 ### 14.4 Seed (idempotente; roda a cada subida da API)
 - **Usuários** (criados só se o e-mail não existir):
@@ -613,6 +623,7 @@ COOKIE_SECURE=false
 - Cache da configuração da agenda (se houver necessidade).
 - Testes de integração com banco real (incluindo concorrência automatizada) e testes E2E (Playwright).
 - Visualização semanal em grade para o admin.
+- nginx com usuário não-root.
 
 ---
 

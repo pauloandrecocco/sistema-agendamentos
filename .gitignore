@@ -1,6 +1,8 @@
 node_modules/
 dist/
 coverage/
+# Prisma generated client
+apps/api/src/generated/
 .env
 *.log
 *.tsbuildinfo

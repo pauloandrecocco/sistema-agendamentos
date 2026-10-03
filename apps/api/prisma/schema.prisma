@@ -1,0 +1,85 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CLIENT
+  ADMIN
+}
+
+enum AppointmentStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+enum CancelledBy {
+  CLIENT
+  ADMIN
+}
+
+model User {
+  id           String        @id @default(uuid()) @db.Uuid
+  name         String
+  email        String        @unique
+  phone        String?
+  passwordHash String        @map("password_hash")
+  role         Role          @default(CLIENT)
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  appointments Appointment[]
+
+  @@map("users")
+}
+
+/// Single row (id = 1).
+model ScheduleSettings {
+  id                  Int      @id @default(1)
+  slotDurationMinutes Int      @map("slot_duration_minutes")
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("schedule_settings")
+}
+
+/// One row per weekday (0 = Sunday ... 6 = Saturday). Times are "HH:mm" in the business timezone.
+model WorkingHour {
+  weekday   Int     @id
+  isActive  Boolean @map("is_active")
+  startTime String  @map("start_time")
+  endTime   String  @map("end_time")
+
+  @@map("working_hours")
+}
+
+/// Calendar date in the business timezone (Prisma returns @db.Date as midnight UTC).
+model BlockedDate {
+  date      DateTime @id @db.Date
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@map("blocked_dates")
+}
+
+/// Manual constraints (migration "appointments_constraints"): appointments_end_after_start and
+/// the exclusion constraint appointments_no_overlap. Keep them if Prisma tries to drop them.
+model Appointment {
+  id          String            @id @default(uuid()) @db.Uuid
+  clientId    String            @map("client_id") @db.Uuid
+  client      User              @relation(fields: [clientId], references: [id])
+  startAt     DateTime          @map("start_at") @db.Timestamptz(3)
+  endAt       DateTime          @map("end_at") @db.Timestamptz(3)
+  status      AppointmentStatus @default(CONFIRMED)
+  cancelledBy CancelledBy?      @map("cancelled_by")
+  cancelledAt DateTime?         @map("cancelled_at") @db.Timestamptz(3)
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([startAt])
+  @@index([clientId, startAt])
+  @@map("appointments")
+}

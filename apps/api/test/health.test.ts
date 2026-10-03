@@ -1,10 +1,10 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
-import { createApp } from '../src/app.js';
+import { buildTestApp } from './helpers/build-test-app.js';
 
 describe('GET /api/health', () => {
   it('responds with status ok', async () => {
-    const res = await request(createApp()).get('/api/health');
+    const res = await request(buildTestApp().app).get('/api/health');
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: 'ok' });
