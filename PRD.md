@@ -686,7 +686,7 @@ Cada fase termina com **lint, typecheck e testes passando** e um commit. Não av
 | **5. Frontend base** | Tailwind + shadcn, router, layout/cabeçalho, cliente HTTP + `ApiError`, contexto de sessão (`/auth/me`), guardas, login/cadastro com `redirect` | Login/logout funcionando para os dois papéis |
 | **6. Telas do cliente** | `MonthCalendar`, `SlotGrid`, fluxo `/agendar` (incl. retorno do login), `/meus-agendamentos` | Fluxo completo de agendar e cancelar no navegador |
 | **7. Telas do admin** | Resumo, aba Agenda (visualização + modo bloqueio), aba Todos, Configurações | Todas as RFs do admin funcionando |
-| **8. Acabamento** | Testes de frontend, README (como rodar, credenciais, decisões, verificação de concorrência), revisão contra a seção 20, teste do zero com `docker compose down -v && docker compose up --build` | Checklist da seção 20 completo |
+| **8. Acabamento** | Testes de frontend (inclui os testes de componente da seção 18.2 — `MonthCalendar` e redirect do visitante em `/agendar` — com jsdom + Testing Library; até a Fase 7 o front testa só lógica pura em ambiente `node`), README (como rodar, credenciais, decisões, verificação de concorrência), revisão contra a seção 20, teste do zero com `docker compose down -v && docker compose up --build` | Checklist da seção 20 completo |
 
 ---
 

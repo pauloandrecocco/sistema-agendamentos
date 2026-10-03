@@ -79,3 +79,15 @@ export function getBusinessDayBounds(date: string): { start: Date; end: Date } {
     end: businessDateTimeToInstant(addDaysToDate(date, 1), '00:00'),
   };
 }
+
+/** Month "YYYY-MM" `months` months after `month` (negative goes back). */
+export function addMonthsToMonth(month: string, months: number): string {
+  const [year, monthNumber] = month.split('-').map(Number);
+  const utc = new Date(Date.UTC(year ?? NaN, (monthNumber ?? NaN) - 1 + months, 1));
+  return `${pad(utc.getUTCFullYear(), 4)}-${pad(utc.getUTCMonth() + 1)}`;
+}
+
+/** Month "YYYY-MM" of a "YYYY-MM-DD" date. */
+export function getMonthOfDate(date: string): string {
+  return date.slice(0, 7);
+}

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   addDaysToDate,
+  addMonthsToMonth,
   businessDateTimeToInstant,
   getBusinessDayBounds,
   getMonthDates,
+  getMonthOfDate,
   getWeekday,
   isValidDateString,
   isValidMonthString,
@@ -57,5 +59,16 @@ describe('calendar helpers', () => {
     expect(isValidMonthString('2026-10')).toBe(true);
     expect(isValidMonthString('2026-13')).toBe(false);
     expect(isValidMonthString('2026-00')).toBe(false);
+  });
+
+  it('adds months across years, forwards and backwards', () => {
+    expect(addMonthsToMonth('2026-10', 1)).toBe('2026-11');
+    expect(addMonthsToMonth('2026-12', 1)).toBe('2027-01');
+    expect(addMonthsToMonth('2026-01', -1)).toBe('2025-12');
+    expect(addMonthsToMonth('2026-10', -14)).toBe('2025-08');
+  });
+
+  it('month of a date', () => {
+    expect(getMonthOfDate('2026-10-05')).toBe('2026-10');
   });
 });
