@@ -7,6 +7,9 @@ import { createAuthenticate } from './middlewares/authenticate.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { notFoundHandler } from './middlewares/not-found.js';
 import { requireJson } from './middlewares/require-json.js';
+import { createAppointmentsController } from './modules/appointments/appointments.controller.js';
+import { createAppointmentsRouter } from './modules/appointments/appointments.routes.js';
+import type { AppointmentsService } from './modules/appointments/appointments.service.js';
 import { createAuthController } from './modules/auth/auth.controller.js';
 import { createAuthRouter } from './modules/auth/auth.routes.js';
 import type { AuthService } from './modules/auth/auth.service.js';
@@ -15,6 +18,7 @@ import { createAvailabilityRouter } from './modules/availability/availability.ro
 import type { AvailabilityService } from './modules/availability/availability.service.js';
 
 export type AppDeps = {
+  appointmentsService: AppointmentsService;
   authService: AuthService;
   availabilityService: AvailabilityService;
   tokenService: TokenService;
@@ -39,6 +43,10 @@ export function createApp(deps: AppDeps) {
   api.use(
     '/availability',
     createAvailabilityRouter(createAvailabilityController(deps.availabilityService)),
+  );
+  api.use(
+    '/appointments',
+    createAppointmentsRouter(createAppointmentsController(deps.appointmentsService), authenticate),
   );
 
   app.use('/api', api);

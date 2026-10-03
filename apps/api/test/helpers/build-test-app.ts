@@ -4,8 +4,10 @@ import { createApp } from '../../src/app.js';
 import { createTokenService } from '../../src/lib/jwt.js';
 import { hashPassword } from '../../src/lib/password.js';
 import type { AppointmentRecord } from '../../src/modules/appointments/appointments.repository.js';
+import { AppointmentsService } from '../../src/modules/appointments/appointments.service.js';
 import { AuthService } from '../../src/modules/auth/auth.service.js';
 import { AvailabilityService } from '../../src/modules/availability/availability.service.js';
+import { FakeTransactionManager } from '../fakes/fake-transaction-manager.js';
 import { InMemoryAppointmentRepository } from '../fakes/in-memory-appointment.repository.js';
 import {
   InMemoryBlockedDateRepository,
@@ -25,15 +27,17 @@ export function buildTestApp(options: { now?: Date } = {}) {
   const appointments = new InMemoryAppointmentRepository();
   const clock = { now: options.now ?? DEFAULT_NOW };
   const tokenService = createTokenService({ secret: TEST_JWT_SECRET, expiresIn: '8h' });
+  const now = () => clock.now;
+  const repos = { schedule, blockedDates, appointments };
 
   const app = createApp({
-    authService: new AuthService(users),
-    availabilityService: new AvailabilityService({
-      schedule,
-      blockedDates,
+    appointmentsService: new AppointmentsService({
+      transactions: new FakeTransactionManager(repos),
       appointments,
-      clock: () => clock.now,
+      clock: now,
     }),
+    authService: new AuthService(users),
+    availabilityService: new AvailabilityService({ ...repos, clock: now }),
     tokenService,
     cookieSecure: false,
   });
@@ -78,4 +82,12 @@ export function getSessionCookie(setCookie: string[] | string | undefined): stri
   const cookie = cookies.find((c) => c.startsWith('access_token='));
   if (!cookie) throw new Error('access_token cookie not set');
   return cookie.split(';')[0]!;
+}
+
+/** Session cookie for a user, signed like the login does (skips the bcrypt round trip). */
+export function sessionCookieFor(
+  tokenService: ReturnType<typeof createTokenService>,
+  user: { id: string; role: Role },
+): string {
+  return `access_token=${tokenService.sign({ userId: user.id, role: user.role }).token}`;
 }

@@ -70,3 +70,6 @@ export class BusinessRuleError extends AppError {
     super(422, code, message);
   }
 }
+
+/** Same message for the application check and the exclusion constraint (RN-07). */
+export const SLOT_ALREADY_BOOKED_MESSAGE = 'Este horário já foi reservado.';

@@ -2,6 +2,7 @@ import type { ApiErrorBody } from '@agenda/shared';
 import type { ErrorRequestHandler } from 'express';
 import { z } from 'zod';
 import { AppError, PayloadTooLargeError, ValidationError } from '../lib/errors.js';
+import { fromPrismaError } from '../lib/prisma-errors.js';
 import { toFieldErrors } from './validate.js';
 
 /** Errors raised by express.json() (body-parser) carry a `type` and an HTTP `status`. */
@@ -18,6 +19,8 @@ function isBodyParserError(err: unknown): err is BodyParserError {
 function toAppError(err: unknown): AppError | null {
   if (err instanceof AppError) return err;
   if (err instanceof z.ZodError) return new ValidationError('Dados inválidos.', toFieldErrors(err));
+  const fromDatabase = fromPrismaError(err);
+  if (fromDatabase) return fromDatabase;
   if (isBodyParserError(err) && err.status >= 400 && err.status < 500) {
     if (err.type === 'entity.too.large') return new PayloadTooLargeError();
     if (err.type === 'entity.parse.failed') {

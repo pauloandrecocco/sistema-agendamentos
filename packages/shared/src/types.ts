@@ -1,4 +1,10 @@
-import type { DayAvailabilityStatus, Role } from './enums.js';
+import type {
+  AppointmentStatus,
+  CancelledBy,
+  DayAvailabilityStatus,
+  DisplayStatus,
+  Role,
+} from './enums.js';
 
 export type HealthResponse = { status: 'ok' };
 
@@ -67,3 +73,19 @@ export type AvailabilityResponse = {
   slotDurationMinutes: number;
   slots: SlotDto[];
 };
+
+/** Appointment as returned by the API; instants are ISO 8601 UTC strings. */
+export type AppointmentDto = {
+  id: string;
+  startAt: string;
+  endAt: string;
+  status: AppointmentStatus;
+  displayStatus: DisplayStatus;
+  cancelledBy: CancelledBy | null;
+  cancelledAt: string | null;
+  createdAt: string;
+};
+
+export type AppointmentResponse = { appointment: AppointmentDto };
+
+export type AppointmentListResponse = { items: AppointmentDto[] };

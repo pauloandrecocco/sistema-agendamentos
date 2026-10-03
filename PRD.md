@@ -283,7 +283,7 @@ Cada módulo: `*.routes.ts → *.controller.ts → *.service.ts → *.repository
 - `createApp(deps)` recebe services já construídos; `server.ts` monta as implementações com Prisma. Nos testes, monta-se o app com **repositórios falsos em memória**.
 - Repositórios são definidos por **interfaces**; há implementação Prisma e implementação em memória.
 - Operações transacionais usam uma abstração `TransactionManager.run(fn)`, que entrega a `fn` repositórios vinculados à transação:
-  - Implementação Prisma: `prisma.$transaction(async (tx) => { await tx.$queryRaw\`SELECT pg_advisory_xact_lock(<SCHEDULE_LOCK_KEY>)\`; return fn(reposFrom(tx)); })`.
+  - Implementação Prisma: `prisma.$transaction(async (tx) => { await tx.$executeRaw\`SELECT pg_advisory_xact_lock(<SCHEDULE_LOCK_KEY>)\`; return fn(reposFrom(tx)); })`. Usa `$executeRaw` (não `$queryRaw`): a função retorna `void`, que o driver adapter do Prisma 7 não desserializa.
   - Implementação fake: apenas executa `fn` com os repositórios em memória.
 - `getScheduleConfig()` retorna duração + horário semanal em uma chamada. É lida do banco a cada operação (leitura de PK, custo desprezível; mudanças valem na hora; sem cache para invalidar). Dentro da reserva, é lida **na mesma transação**.
 
@@ -392,7 +392,9 @@ TransactionManager.run(async (repos) => {          // inclui pg_advisory_xact_lo
 })
 // erro da constraint appointments_no_overlap (SQLSTATE 23P01) -> 409 SLOT_ALREADY_BOOKED
 ```
-A conversão do erro do banco fica em **um único ponto** (`lib/prisma-errors.ts`), identificando a violação pelo nome da constraint / SQLSTATE `23P01`.
+A conversão do erro do banco fica em **um único ponto** (`lib/prisma-errors.ts`), identificando a violação pelo nome da constraint / SQLSTATE `23P01`. Com Prisma 7 + `@prisma/adapter-pg` (verificado no banco real), a violação chega como `PrismaClientKnownRequestError` de código genérico `P2039`, com `meta.driverAdapterError.cause = { kind: 'postgres', originalCode: '23P01', originalMessage: '... "appointments_no_overlap"' }` — igual dentro ou fora da transação interativa.
+
+**Cancelamento** (RN-08) usa atualização condicional (`UPDATE ... WHERE id = ? AND status = 'CONFIRMED'`); se nenhuma linha for afetada (outro cancelamento concorrente venceu), responde `422 APPOINTMENT_ALREADY_CANCELLED`. Dois cancelamentos simultâneos nunca se sobrescrevem.
 
 ### 9.3 Fluxo de bloqueio
 Mesma transação com o mesmo advisory lock: valida datas `≥ hoje` → insere bloqueios (ignorando existentes) → cancela `CONFIRMED` dessas datas com `startAt > now` (`cancelledBy = ADMIN`) → retorna bloqueios e cancelados.
