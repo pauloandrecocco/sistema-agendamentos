@@ -35,9 +35,7 @@ export type RegisterData = z.output<typeof registerSchema>;
 
 export const loginSchema = z.object({
   email: emailSchema,
-  password: z
-    .string({ error: 'Informe a senha.' })
-    .min(1, { error: 'Informe a senha.' }),
+  password: z.string({ error: 'Informe a senha.' }).min(1, { error: 'Informe a senha.' }),
 });
 export type LoginInput = z.input<typeof loginSchema>;
 export type LoginData = z.output<typeof loginSchema>;

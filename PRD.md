@@ -171,7 +171,7 @@ Calculado em **um único helper** compartilhado; a API devolve `status` e `displ
 - Cadastro: nome, e-mail, telefone (opcional), senha. Após cadastro, usuário já fica logado.
 - Login: e-mail e senha.
 - Logout: limpa o cookie de sessão.
-- Telas de login e cadastro aceitam `?redirect=<caminho interno>`; após sucesso, voltam a ele. Só caminhos internos começando com `/` são aceitos (evita *open redirect*). Sem `redirect`: `ADMIN → /admin`, `CLIENT → /agendar`.
+- Telas de login e cadastro aceitam `?redirect=<caminho interno>`; após sucesso, voltam a ele. Só caminhos internos são aceitos (evita *open redirect*): o valor deve começar com `/` e **não** com `//` nem `/\` (navegadores tratam `/\site.com` como `//site.com`). Valor recusado é ignorado (vale o destino padrão). Sem `redirect`: `ADMIN → /admin`, `CLIENT → /agendar`.
 
 ### 6.2 Cliente / visitante
 **RF-02 — Calendário de disponibilidade (público).** Calendário mensal; cada dia tem um estado: `AVAILABLE` (com vagas), `NO_SLOTS` (aberto, mas sem vagas — inclui hoje com todos os horários já passados), `CLOSED`, `BLOCKED`, `PAST`. Apenas `AVAILABLE` é clicável. Navegação livre entre meses futuros; meses passados desabilitados.
@@ -580,6 +580,7 @@ COOKIE_SECURE=false
 | `/admin/configuracoes` | `ADMIN` | Configuração da agenda (RF-11) |
 
 - Guardas de rota por papel: não logado → `/login?redirect=…`; papel errado → página inicial do seu papel.
+- Sessão via `GET /auth/me` (TanStack Query): `401` significa "não logado", não é erro exibido. Qualquer `401 UNAUTHENTICATED` em outra requisição (ex.: cookie expirado com a aplicação aberta) zera a sessão no cliente; as guardas então mandam ao login com o `redirect` da página atual, sem toast.
 - Cabeçalho: links conforme papel, nome do usuário, "Sair".
 - Interface em **português (pt-BR)**; datas formatadas no fuso de negócio com locale `ptBR`.
 

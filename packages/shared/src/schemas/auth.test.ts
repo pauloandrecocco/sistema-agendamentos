@@ -26,9 +26,12 @@ describe('registerSchema', () => {
     expect(registerSchema.parse({ ...valid, phone: '   ' }).phone).toBeUndefined();
   });
 
-  it.each(['123456789', '119876543210', '(11) 9876', 'abc', '( ) -'])('rejects phone %s', (phone) => {
-    expect(registerSchema.safeParse({ ...valid, phone }).success).toBe(false);
-  });
+  it.each(['123456789', '119876543210', '(11) 9876', 'abc', '( ) -'])(
+    'rejects phone %s',
+    (phone) => {
+      expect(registerSchema.safeParse({ ...valid, phone }).success).toBe(false);
+    },
+  );
 
   it.each([
     ['name too short', { name: ' A ' }],

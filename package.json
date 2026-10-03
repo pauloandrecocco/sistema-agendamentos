@@ -21,7 +21,7 @@
     "pretest": "npm run build:deps",
     "test": "npm run test --workspaces",
     "prelint": "npm run build:deps",
-    "lint": "eslint .",
+    "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
