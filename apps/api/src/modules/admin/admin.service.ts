@@ -1,4 +1,5 @@
 import {
+  INVALID_PERIOD_MESSAGE,
   addDaysToDate,
   getBusinessDayBounds,
   getMonthDates,
@@ -9,6 +10,7 @@ import {
   type AdminSummaryResponse,
 } from '@agenda/shared';
 import type { Clock } from '../../lib/clock.js';
+import { ValidationError } from '../../lib/errors.js';
 import type { AppointmentRepository } from '../appointments/appointments.repository.js';
 import { toAppointmentDto } from '../appointments/appointments.service.js';
 import { isWeekdayActive } from '../availability/availability.engine.js';
@@ -84,6 +86,10 @@ export class AdminService {
   async listAppointments(query: AdminAppointmentsQuery): Promise<AdminAppointmentListResponse> {
     const now = this.deps.clock();
     const from = query.from ?? toBusinessDate(now);
+    // The schema compares only when both are sent: `to` before the default `from` is the same error.
+    if (query.to && from > query.to) {
+      throw new ValidationError('Dados inválidos.', { to: [INVALID_PERIOD_MESSAGE] });
+    }
     const { items, total } = await this.deps.appointments.listForAdmin({
       start: getBusinessDayBounds(from).start,
       ...(query.to && { end: getBusinessDayBounds(query.to).end }),

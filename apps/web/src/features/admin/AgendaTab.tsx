@@ -1,4 +1,5 @@
 import {
+  BLOCK_DATES_MAX,
   getMonthOfDate,
   isValidDateString,
   type AdminAppointmentDto,
@@ -103,6 +104,18 @@ export function AgendaTab({ today, onCancel }: AgendaTabProps) {
     }
   }
 
+  // The API takes at most BLOCK_DATES_MAX dates per request: a larger selection is refused here,
+  // keeping the previous one (a drag past the limit stops growing).
+  function changeSelection(next: Set<string>) {
+    if (next.size > BLOCK_DATES_MAX) {
+      toast.error(`Selecione no máximo ${BLOCK_DATES_MAX} dias por vez.`, {
+        id: 'selection-limit',
+      });
+      return;
+    }
+    setSelection(next);
+  }
+
   function changeMode(blockMode: boolean) {
     setMode(blockMode ? 'block' : 'view');
     setSelection(new Set());
@@ -156,7 +169,8 @@ export function AgendaTab({ today, onCancel }: AgendaTabProps) {
         {mode === 'block' && (
           <p className="text-muted-foreground text-sm">
             Toque ou clique nos dias para selecionar; com o mouse, clique e arraste para selecionar
-            um intervalo. Dias passados não podem ser selecionados.
+            um intervalo. Dias passados não podem ser selecionados. Até {BLOCK_DATES_MAX} dias por
+            vez.
           </p>
         )}
 
@@ -171,7 +185,7 @@ export function AgendaTab({ today, onCancel }: AgendaTabProps) {
           <MonthCalendar
             mode="multi"
             selected={selection}
-            onSelectionChange={setSelection}
+            onSelectionChange={changeSelection}
             {...calendarProps}
           />
         )}

@@ -3,6 +3,7 @@ import {
   CancelledBy,
   Role,
   businessDateTimeToInstant,
+  type AdminCalendarResponse,
   type AppointmentDto,
   type ScheduleConfigInput,
 } from '@agenda/shared';
@@ -105,6 +106,32 @@ describe('GET/PUT /api/admin/schedule', () => {
     expect(ctx.appointments.appointments).toEqual(before);
   });
 
+  it('keeps appointments of a day that became closed visible to the admin (RN-10)', async () => {
+    const tuesday = book(TUESDAY, '09:30');
+    const body = validBody();
+    body.workingHours[2] = { weekday: 2, isActive: false, startTime: '09:00', endTime: '18:00' };
+    expect((await put(body)).status).toBe(200);
+
+    const calendar = await request(ctx.app)
+      .get('/api/admin/calendar?month=2026-10')
+      .set('Cookie', adminCookie);
+    const days = (calendar.body as AdminCalendarResponse).days;
+    expect(days.find((day) => day.date === TUESDAY)).toMatchObject({
+      appointmentsCount: 1,
+      isClosed: true,
+    });
+
+    const summary = await request(ctx.app).get('/api/admin/summary').set('Cookie', adminCookie);
+    expect(summary.body).toEqual({ today: 0, next7Days: 1 });
+
+    const list = await request(ctx.app)
+      .get(`/api/admin/appointments?from=${TUESDAY}&to=${TUESDAY}`)
+      .set('Cookie', adminCookie);
+    expect(list.body.items).toEqual([
+      expect.objectContaining({ id: tuesday.id, displayStatus: 'CONFIRMED' }),
+    ]);
+  });
+
   it('400 for an invalid duration, misaligned time, end <= start or missing/repeated weekday', async () => {
     const cases: [string, (body: ScheduleConfigInput) => void, string][] = [
       ['duration 45', (body) => (body.slotDurationMinutes = 45), 'slotDurationMinutes'],
@@ -175,6 +202,38 @@ describe('POST /api/admin/blocked-dates', () => {
     expect(stored(otherDay.id)?.status).toBe(AppointmentStatus.CONFIRMED);
     expect(stored(alreadyCancelled.id)).toMatchObject({ cancelledBy: CancelledBy.CLIENT });
     expect([...ctx.blockedDates.dates].sort()).toEqual([MONDAY, TUESDAY]);
+  });
+
+  it('keeps an appointment that starts exactly now (startAt == now has started)', async () => {
+    const startingNow = book(MONDAY, '10:10');
+    const later = book(MONDAY, '10:30');
+
+    const res = await block([MONDAY]);
+
+    expect(res.status).toBe(200);
+    expect((res.body.cancelledAppointments as AppointmentDto[]).map((item) => item.id)).toEqual([
+      later.id,
+    ]);
+    expect(ctx.appointments.appointments.find((item) => item.id === startingNow.id)?.status).toBe(
+      AppointmentStatus.CONFIRMED,
+    );
+  });
+
+  it('lists the cancelled appointments in chronological order', async () => {
+    // Stored out of order, like the rows of an UPDATE ... RETURNING may come back.
+    const wednesday = book(WEDNESDAY, '09:00');
+    const tuesdayLate = book(TUESDAY, '15:00');
+    const tuesdayEarly = book(TUESDAY, '09:00');
+    const mondayNight = book(MONDAY, '22:00');
+
+    const res = await block([WEDNESDAY, TUESDAY, MONDAY]);
+
+    expect((res.body.cancelledAppointments as AppointmentDto[]).map((item) => item.id)).toEqual([
+      mondayNight.id,
+      tuesdayEarly.id,
+      tuesdayLate.id,
+      wednesday.id,
+    ]);
   });
 
   it('is idempotent: blocking again cancels nothing new', async () => {
@@ -253,6 +312,14 @@ describe('POST /api/admin/blocked-dates/unblock', () => {
     const res = await unblock([TUESDAY]);
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ unblockedDates: [TUESDAY] });
+  });
+
+  it('accepts today (only dates before today are past)', async () => {
+    ctx.blockedDates.dates.add(MONDAY);
+    const res = await unblock([MONDAY]);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ unblockedDates: [MONDAY] });
+    expect(ctx.blockedDates.dates.has(MONDAY)).toBe(false);
   });
 
   it('422 INVALID_DATE for a past date', async () => {

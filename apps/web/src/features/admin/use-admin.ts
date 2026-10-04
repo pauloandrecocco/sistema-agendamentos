@@ -35,6 +35,7 @@ export function useAdminSummary() {
   return useQuery({
     queryKey: queryKeys.admin.summary,
     queryFn: () => api.get<AdminSummaryResponse>('/admin/summary'),
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -42,6 +43,7 @@ export function useAdminCalendar(month: string) {
   return useQuery({
     queryKey: queryKeys.admin.calendar(month),
     queryFn: () => fetchAdminCalendar(month),
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -67,6 +69,7 @@ export function useAdminAppointments(
       return api.get<AdminAppointmentListResponse>(`/admin/appointments?${search.toString()}`);
     },
     enabled,
+    refetchOnWindowFocus: true,
     ...(keepPrevious && { placeholderData: keepPreviousData }),
   });
 }

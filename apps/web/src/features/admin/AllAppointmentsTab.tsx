@@ -63,6 +63,16 @@ export function AllAppointmentsTab({ today, onCancel }: AllAppointmentsTabProps)
   const total = query.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / (query.data?.pageSize ?? 1)));
 
+  // After an action (e.g. cancelling the only item of the last page with a status filter) the
+  // page may be past the end: go to the last one. Decided on fresh data, not on placeholder data.
+  const pageIsPastEnd = query.isSuccess && !query.isPlaceholderData && filters.page > totalPages;
+  useEffect(() => {
+    if (!pageIsPastEnd) return;
+    setSearchParams((previous) => writeListFilters(previous, { page: totalPages }), {
+      replace: true,
+    });
+  }, [pageIsPastEnd, totalPages, setSearchParams]);
+
   return (
     <div className="grid gap-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

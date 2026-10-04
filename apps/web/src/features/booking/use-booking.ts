@@ -14,6 +14,7 @@ export function useAvailabilityCalendar(month: string) {
       api.get<AvailabilityCalendarResponse>(
         `/availability/calendar?month=${encodeURIComponent(month)}`,
       ),
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -23,6 +24,7 @@ export function useDayAvailability(date: string | null) {
     queryFn: () =>
       api.get<AvailabilityResponse>(`/availability?date=${encodeURIComponent(date ?? '')}`),
     enabled: date !== null,
+    refetchOnWindowFocus: true,
   });
 }
 

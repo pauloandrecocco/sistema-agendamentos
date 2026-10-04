@@ -8,7 +8,8 @@ import { AdminSummary } from '@/features/admin/AdminSummary';
 import { AgendaTab } from '@/features/admin/AgendaTab';
 import { AllAppointmentsTab } from '@/features/admin/AllAppointmentsTab';
 import { useAdminCancel } from '@/features/admin/use-admin';
-import { formatInstantDate, formatTime, getBusinessToday } from '@/lib/format';
+import { formatInstantDate, formatTime } from '@/lib/format';
+import { useBusinessToday } from '@/lib/use-now';
 
 const AGENDA_TAB = 'agenda';
 const ALL_TAB = 'todos';
@@ -20,7 +21,7 @@ const ALL_TAB = 'todos';
 export function AdminPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = searchParams.get('aba') === ALL_TAB ? ALL_TAB : AGENDA_TAB;
-  const [today] = useState(() => getBusinessToday());
+  const today = useBusinessToday();
 
   const cancelAppointment = useAdminCancel();
   const [toCancel, setToCancel] = useState<AdminAppointmentDto | null>(null);

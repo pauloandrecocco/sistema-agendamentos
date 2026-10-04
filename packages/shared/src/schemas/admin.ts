@@ -8,6 +8,7 @@ import { dateStringSchema, monthStringSchema } from './availability.js';
 export const ADMIN_PAGE_SIZE_DEFAULT = 20;
 export const ADMIN_PAGE_SIZE_MAX = 100;
 export const BLOCK_DATES_MAX = 92;
+export const INVALID_PERIOD_MESSAGE = 'A data inicial deve ser anterior ou igual à data final.';
 
 export const adminCalendarQuerySchema = z.object({ month: monthStringSchema });
 export type AdminCalendarQuery = z.output<typeof adminCalendarQuerySchema>;
@@ -42,8 +43,9 @@ export const adminAppointmentsQuerySchema = z
       })
       .default(ADMIN_PAGE_SIZE_DEFAULT),
   })
+  // Only when both are sent: with `from` omitted, the service checks today <= `to`.
   .refine((query) => !query.from || !query.to || query.from <= query.to, {
-    error: 'A data inicial deve ser anterior ou igual à data final.',
+    error: INVALID_PERIOD_MESSAGE,
     path: ['to'],
   });
 export type AdminAppointmentsQuery = z.output<typeof adminAppointmentsQuerySchema>;

@@ -1,6 +1,7 @@
 import { DisplayStatus, type AdminAppointmentDto } from '@agenda/shared';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
+import { useDisplayStatus } from '@/lib/appointment-status';
 import { formatPhone, formatTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -12,8 +13,9 @@ type AdminAppointmentRowProps = {
 /** One appointment in the admin lists (RF-08, RF-09). Cancelled ones are dimmed. */
 export function AdminAppointmentRow({ appointment, onCancel }: AdminAppointmentRowProps) {
   const { client } = appointment;
-  const isCancelled = appointment.displayStatus === DisplayStatus.CANCELLED;
-  const canCancel = appointment.displayStatus === DisplayStatus.CONFIRMED;
+  const displayStatus = useDisplayStatus(appointment);
+  const isCancelled = displayStatus === DisplayStatus.CANCELLED;
+  const canCancel = displayStatus === DisplayStatus.CONFIRMED;
 
   return (
     <li
@@ -35,7 +37,11 @@ export function AdminAppointmentRow({ appointment, onCancel }: AdminAppointmentR
         </div>
       </div>
       <div className="flex items-center justify-between gap-3 sm:justify-end">
-        <StatusBadge appointment={appointment} viewer="ADMIN" />
+        <StatusBadge
+          displayStatus={displayStatus}
+          cancelledBy={appointment.cancelledBy}
+          viewer="ADMIN"
+        />
         {canCancel && (
           <Button variant="outline" size="sm" onClick={() => onCancel(appointment)}>
             Cancelar

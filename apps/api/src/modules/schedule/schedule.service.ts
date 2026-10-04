@@ -69,7 +69,10 @@ export class ScheduleService {
     });
     return {
       blockedDates: dates,
-      cancelledAppointments: cancelled.map((appointment) => toAppointmentDto(appointment, now)),
+      // UPDATE ... RETURNING has no order: listed chronologically for the final message.
+      cancelledAppointments: cancelled
+        .sort((a, b) => a.startAt.getTime() - b.startAt.getTime())
+        .map((appointment) => toAppointmentDto(appointment, now)),
     };
   }
 

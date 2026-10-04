@@ -11,6 +11,8 @@ export function useMyAppointments(scope: AppointmentScope) {
   return useQuery({
     queryKey: queryKeys.myAppointments.list(scope),
     queryFn: () => api.get<AppointmentListResponse>(`/appointments/me?scope=${scope}`),
+    // Statuses and "upcoming" depend on the time: back on the tab, the list is checked again.
+    refetchOnWindowFocus: true,
   });
 }
 

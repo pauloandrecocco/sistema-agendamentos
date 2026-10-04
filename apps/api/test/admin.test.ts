@@ -255,7 +255,25 @@ describe('GET /api/admin/appointments', () => {
     const body = await list('?page=2&pageSize=2');
     expect(ids(body)).toEqual([mondayFuture.id, tuesdayCancelled.id]);
     expect(body).toMatchObject({ page: 2, pageSize: 2, total: 5 });
-    expect((await list('?page=9')).items).toEqual([]);
+  });
+
+  it('a page past the end is empty but still reports the total', async () => {
+    const body = await list('?page=9&pageSize=2');
+    expect(body).toEqual({ items: [], page: 9, pageSize: 2, total: 5 });
+  });
+
+  it('400 when `to` is before the default `from` (today)', async () => {
+    const res = await get('/admin/appointments?to=2026-10-04');
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatchObject({
+      code: 'VALIDATION_ERROR',
+      details: { to: ['A data inicial deve ser anterior ou igual à data final.'] },
+    });
+    expect(ids(await list(`?to=${MONDAY}`))).toEqual([
+      mondayStarted.id,
+      mondayNow.id,
+      mondayFuture.id,
+    ]);
   });
 
   it('400 for from after to or an invalid status', async () => {

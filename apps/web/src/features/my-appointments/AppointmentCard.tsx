@@ -1,17 +1,20 @@
-import type { AppointmentDto } from '@agenda/shared';
+import { DisplayStatus, type AppointmentDto } from '@agenda/shared';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
+import { useDisplayStatus } from '@/lib/appointment-status';
 import { formatInstantWeekdayDate, formatTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 type AppointmentCardProps = {
   appointment: AppointmentDto;
-  /** Shown only on upcoming appointments (RF-06). */
+  /** Passed only on upcoming appointments (RF-06); shown while it has not started (RN-08). */
   onCancel?: (appointment: AppointmentDto) => void;
 };
 
 export function AppointmentCard({ appointment, onCancel }: AppointmentCardProps) {
-  const isCancelled = appointment.displayStatus === 'CANCELLED';
+  const displayStatus = useDisplayStatus(appointment);
+  const isCancelled = displayStatus === DisplayStatus.CANCELLED;
+  const canCancel = !!onCancel && displayStatus === DisplayStatus.CONFIRMED;
   return (
     <li
       className={cn(
@@ -32,10 +35,14 @@ export function AppointmentCard({ appointment, onCancel }: AppointmentCardProps)
           <span className="text-muted-foreground tabular-nums">
             {formatTime(appointment.startAt)} – {formatTime(appointment.endAt)}
           </span>
-          <StatusBadge appointment={appointment} viewer="CLIENT" />
+          <StatusBadge
+            displayStatus={displayStatus}
+            cancelledBy={appointment.cancelledBy}
+            viewer="CLIENT"
+          />
         </div>
       </div>
-      {onCancel && (
+      {canCancel && (
         <Button
           variant="outline"
           className="w-full sm:w-auto"

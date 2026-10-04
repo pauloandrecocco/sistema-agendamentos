@@ -41,6 +41,8 @@ export const queryClient: QueryClient = new QueryClient({
     queries: {
       // A 4xx will not change by retrying.
       retry: (failureCount, error) => !isClientError(error) && failureCount < 2,
+      // Enabled per query where the data changes with time or with other users (appointments,
+      // availability); the session and the settings form are not refetched on focus.
       refetchOnWindowFocus: false,
     },
   },

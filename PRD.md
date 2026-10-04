@@ -561,7 +561,7 @@ COOKIE_SECURE=false
 - **Configuração** (só se não existir; nunca sobrescreve alterações do admin): slot 30 min; seg–sex 09:00–18:00 ativos; sáb 09:00–13:00 ativo; dom inativo (09:00–18:00 guardado).
 - **Agendamentos de exemplo** (só se a tabela estiver vazia), relativos à data atual, alinhados aos slots, dentro do expediente e sem sobreposição:
   - 2 passados concluídos (Maria), 1 passado cancelado pelo cliente (João);
-  - 3 futuros confirmados nos próximos dias úteis (2 Maria, 1 João);
+  - 3 futuros confirmados nos próximos dias abertos (2 Maria, 1 João);
   - 1 futuro cancelado pelo admin (Maria).
   - Representam histórico: são inseridos direto no banco com `created_at` **anterior** ao `start_at` (como se tivessem sido feitos quando ainda eram futuros), mantendo coerência com a regra de não agendar no passado. Nenhuma rota da API permite criar agendamento no passado.
 

@@ -23,8 +23,9 @@ import {
   useDayAvailability,
 } from '@/features/booking/use-booking';
 import { ApiError, getErrorMessage, isUnauthenticated } from '@/lib/api-client';
-import { formatDate, formatLongDate, formatTime, getBusinessToday } from '@/lib/format';
+import { formatDate, formatLongDate, formatTime } from '@/lib/format';
 import { queryKeys } from '@/lib/query-keys';
+import { useBusinessToday } from '@/lib/use-now';
 import { cn } from '@/lib/utils';
 
 const ADMIN_NOTICE = 'Administradores não realizam agendamentos.';
@@ -52,18 +53,20 @@ export function BookingPage() {
   const isClient = user?.role === Role.CLIENT;
   const isAdmin = user?.role === Role.ADMIN;
 
-  const [today] = useState(() => getBusinessToday());
+  const today = useBusinessToday();
   const currentMonth = getMonthOfDate(today);
 
   const dateParam = searchParams.get('date');
   const selectedDate = dateParam && isValidDateString(dateParam) ? dateParam : null;
   const slotParam = searchParams.get('slot');
 
-  const [month, setMonth] = useState(() =>
+  const [visibleMonth, setMonth] = useState(() =>
     selectedDate && getMonthOfDate(selectedDate) > currentMonth
       ? getMonthOfDate(selectedDate)
       : currentMonth,
   );
+  // With the page open across the turn of the month, the month left behind is no longer shown.
+  const month = visibleMonth < currentMonth ? currentMonth : visibleMonth;
 
   const calendar = useAvailabilityCalendar(month);
   const day = useDayAvailability(selectedDate);

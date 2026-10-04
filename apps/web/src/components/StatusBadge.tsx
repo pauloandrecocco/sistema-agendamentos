@@ -11,15 +11,17 @@ const STATUS_CLASSES: Record<DisplayStatus, string> = {
 
 /** Badge of the display status (RN-09), worded for who is looking at it. */
 export function StatusBadge({
-  appointment,
+  displayStatus,
+  cancelledBy,
   viewer,
 }: {
-  appointment: Pick<AppointmentDto, 'displayStatus' | 'cancelledBy'>;
+  displayStatus: DisplayStatus;
+  cancelledBy: AppointmentDto['cancelledBy'];
   viewer: StatusViewer;
 }) {
   return (
-    <Badge className={cn('border-transparent', STATUS_CLASSES[appointment.displayStatus])}>
-      {getStatusLabel(appointment, viewer)}
+    <Badge className={cn('border-transparent', STATUS_CLASSES[displayStatus])}>
+      {getStatusLabel({ displayStatus, cancelledBy }, viewer)}
     </Badge>
   );
 }
