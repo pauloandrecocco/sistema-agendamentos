@@ -161,26 +161,90 @@ O script faz login como Maria, encontra um horário livre no mês atual ou no se
 - Visualização semanal em grade para o admin.
 - nginx com usuário não-root.
 
-## Desenvolvimento com IA
+## Desenvolvimento
 
-> _Seção a completar._
+A stack definida para este projeto foi:
 
-### Ferramentas e fluxo
+- React + TypeScript.
+- Node.js + TypeScript.
+- Banco de dados PostgreSQL.
+- Docker.
 
-- _TODO: ferramentas usadas (Claude Code, modelo) e como o trabalho foi organizado (PRD como fonte de verdade, `CLAUDE.md`, fases da seção 19)._
+Este projeto foi desenvolvido com apoio de IA em duas frentes:
 
-### Como a IA foi orientada
+- **Claude (chat):** discussão dos requisitos, escrita do PRD e revisão dos planos e resultados de cada fase.
+- **Claude Code:** implementação, testes e verificação.
 
-- _TODO: como o PRD e o `CLAUDE.md` guiaram as sessões; plano antes de codar; revisão por fase._
+### 1. Especificação antes do código
 
-### O que funcionou bem
+O PRD foi construído em conversa, em rodadas de perguntas: domínio, fluxos e telas, e decisões técnicas.
+Antes de escrever o documento, foi feita uma revisão de inconsistências entre regras e funcionalidades.
+Algumas decisões vieram de simplificações deliberadas para a v1:
 
-- _TODO_
+- agenda única com slots de 30 ou 60 minutos e um intervalo de expediente por dia;
+- confirmação automática dos agendamentos;
+- regras de antecedência registradas como melhorias futuras.
 
-### Onde foi preciso intervir ou corrigir
+Avaliei também o agendamento sem conta e optei por contas com navegação pública: qualquer pessoa vê os
+horários, e o login só é pedido para confirmar. Isso mantém o requisito "ver e cancelar meus agendamentos"
+atendido com segurança.
 
-- _TODO: exemplos concretos (decisões revistas, bugs encontrados na revisão, armadilhas como fuso/relógio falso)._
+O `PRD.md` passou a ser a fonte de verdade, com uma regra: **uma mudança de regra atualiza o PRD antes
+do código**. O `CLAUDE.md` guarda as convenções e os pontos fáceis de errar para o Claude Code.
 
-### Verificação do que a IA produziu
+### 2. Implementação em fases
 
-- _TODO: testes, lint/typecheck, verificação manual no navegador e com o script de concorrência._
+A implementação foi dividida em 9 fases (0 a 8). Cada fase seguiu o mesmo ciclo:
+
+1. contexto limpo e plano em _plan mode_;
+2. revisão do plano antes de aprovar;
+3. implementação;
+4. verificação: lint, typecheck, testes e checagens reais no banco e no navegador;
+5. aprovação do resultado e commit.
+
+As ambiguidades encontradas pelo Claude Code viraram perguntas para mim, e as respostas foram registradas
+no PRD.
+
+### 3. Revisões independentes
+
+Depois das fases 3 e 7, um subagente sem o contexto da implementação revisou o código contra o PRD.
+Ele classificou os achados por gravidade. Para cada achado, decidi entre corrigir, documentar ou ignorar,
+e registrei o motivo.
+
+### 4. Onde a revisão humana fez diferença
+
+Problemas encontrados ao revisar planos e resultados, antes de chegarem ao código final:
+
+- **Busca por telefone:** um termo sem dígitos ("maria") casaria com todos os registros (`contains ""`).
+- **Cancelamento concorrente:** cliente e admin cancelando ao mesmo tempo se sobrescreveriam. A solução
+  foi uma atualização condicional.
+- **Botão "Voltar" depois de agendar:** mostrava o erro "horário indisponível" para o próprio agendamento.
+- **Painel do dia no admin:** ao trocar de dia, exibia por um instante os agendamentos do dia anterior,
+  com o botão de cancelar ativo.
+- **Status desatualizado:** com a página aberta, um agendamento que já tinha começado continuava
+  cancelável.
+
+Erros da própria IA, detectados por verificação:
+
+- O PRD indicava uma forma de chamar o _advisory lock_ que não funciona no Prisma 7. O Claude Code
+  identificou o problema num teste real, corrigiu o PRD e só depois o código.
+
+### 5. Verificação além dos testes
+
+- 292 testes automatizados (unitários, rotas com Supertest e componentes).
+- Scripts descartáveis de Playwright nas fases de interface:
+  - telas em 1280px e 375px;
+  - navegador no **fuso de Tóquio**, para provar que nenhuma tela usa o fuso da máquina;
+  - relógio adiantado, para testar a mudança de status sem esperar o horário chegar.
+- Script de concorrência: duas reservas simultâneas resultam numa 201 e numa 409. A _exclusion
+  constraint_ foi verificada à parte, com INSERT direto no banco.
+- Checklist final (seção 20 do PRD) com evidência item a item, incluindo subir do zero sem `.env`.
+
+### 6. Aprendizados
+
+- Planejar e revisar o plano custa menos do que corrigir depois. A maioria dos problemas foi pega
+  nessa etapa.
+- "Testes passando" não basta: pedir verificação real (banco, navegador, concorrência) revelou casos
+  que os testes com mocks não cobririam.
+- Uma revisão por um agente sem o contexto da implementação encontra o que a própria sessão deixa passar.
+- A IA erra com confiança, inclusive no PRD. Por isso cada decisão foi verificada, não apenas aceita.
